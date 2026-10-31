@@ -1,0 +1,6 @@
+backups/
+mouse/ckb-next/
+TorchBinds.lua.pre-v8
+*.zip
+*.bak*
+mouse/install.log

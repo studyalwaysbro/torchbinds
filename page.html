@@ -1,0 +1,426 @@
+<title>Frost Mage Tartarus Binds</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one column reference sheet. The keypad drawing leads, the slot tables and focus notes follow. */
+:root{
+  --bg:#eef2f6; --panel:#ffffff; --ink:#14212e; --muted:#5a6b7c; --line:#c9d4df;
+  --frost:#0b72b5; --shift:#a8540a; --keycap:#f7fafc; --keymute:#e3e9ef;
+  --dmg:#0b72b5; --ctl:#7a3fb8; --def:#17805a; --util:#8a6a12; --slotedge:#8a7a4a;
+  --display:"Barlow Condensed","Arial Narrow",sans-serif;
+  --body:"Barlow","Segoe UI",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0c141c; --panel:#131e29; --ink:#e4edf5; --muted:#8fa2b4; --line:#263544;
+  --frost:#5fc0f5; --shift:#f2a65a; --keycap:#1a2734; --keymute:#101922;
+  --dmg:#5fc0f5; --ctl:#c39bf0; --def:#5fd3a4; --util:#e0c065; --slotedge:#6b5f3a; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0c141c; --panel:#131e29; --ink:#e4edf5; --muted:#8fa2b4; --line:#263544;
+  --frost:#5fc0f5; --shift:#f2a65a; --keycap:#1a2734; --keymute:#101922;
+  --dmg:#5fc0f5; --ctl:#c39bf0; --def:#5fd3a4; --util:#e0c065; --slotedge:#6b5f3a; color-scheme:dark }
+
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5}
+.wrap{max-width:980px;margin:0 auto;padding-inline:16px;padding-block:28px 56px;display:flex;flex-direction:column;gap:36px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.1}
+h1{font-size:2.6rem;font-weight:700;letter-spacing:.01em;text-transform:uppercase}
+h2{font-size:1.6rem;font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+h3{font-size:1.15rem;font-weight:600;letter-spacing:.02em}
+p{margin:0;max-width:66ch}
+.lede{color:var(--muted)}
+section{display:flex;flex-direction:column;gap:14px;min-width:0}
+kbd{font-family:var(--mono);font-size:.82em;background:var(--keycap);border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:1px 6px;white-space:nowrap}
+.sh{color:var(--shift);font-weight:600}
+
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:.9rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+
+.scroll{overflow-x:auto}
+.pad{min-width:720px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;display:grid;grid-template-columns:1fr 210px;gap:20px;align-items:end}
+.keys{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.key{background:var(--keycap);border:1px solid var(--line);border-bottom-width:3px;border-radius:8px;padding:7px 8px 8px;min-height:92px;display:flex;flex-direction:column;gap:3px;border-top:3px solid var(--role,var(--line))}
+.key.mute{background:var(--keymute);--role:var(--line)}
+.key .top{display:flex;justify-content:space-between;align-items:baseline}
+.key .send{font-family:var(--display);font-size:1.35rem;font-weight:700;line-height:1}
+.key .pos{font-family:var(--mono);font-size:.68rem;color:var(--muted)}
+.key .base{font-weight:600;font-size:.92rem;line-height:1.15}
+.key .shift{font-size:.8rem;line-height:1.15;color:var(--shift)}
+.key .ctrl{font-size:.8rem;line-height:1.15;color:var(--def)}
+.ct{color:var(--def);font-weight:600}
+.key .lvl{font-size:.7rem;color:var(--muted)}
+.thumb{display:flex;flex-direction:column;gap:8px}
+.dpad{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.dpad .key{min-height:62px;padding:5px 6px}
+.dpad .key .base{font-size:.78rem}
+.dpad .key .send{font-size:1rem}
+.cap{font-family:var(--display);text-transform:uppercase;letter-spacing:.08em;font-size:.8rem;color:var(--muted)}
+
+table{border-collapse:collapse;width:100%;font-size:.95rem;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--display);text-transform:uppercase;letter-spacing:.06em;font-size:.8rem;color:var(--muted);font-weight:600}
+td.n{font-family:var(--mono);color:var(--muted);width:3.5em}
+.note{color:var(--muted);font-size:.88rem}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px}
+.two>div{min-width:0;display:flex;flex-direction:column;gap:10px}
+
+.focus{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--ctl);border-radius:8px;padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+ol,ul{margin:0;padding-left:1.25em;max-width:66ch;display:flex;flex-direction:column;gap:6px}
+.macro{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.macro header{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line)}
+.macro pre{margin:0;padding:12px;font-family:var(--mono);font-size:.82rem;overflow-x:auto;line-height:1.5}
+button.copy{font:600 .8rem var(--body);color:var(--frost);background:transparent;border:1px solid var(--frost);border-radius:5px;padding:3px 10px;cursor:pointer}
+button.copy:hover{background:var(--frost);color:var(--panel)}
+button.copy:focus-visible,a:focus-visible{outline:2px solid var(--frost);outline-offset:2px}
+@media (max-width:520px){h1{font-size:2rem}}
+
+.ki{width:20px;height:20px;border-radius:3px;vertical-align:-4px;margin-right:5px;border:1px solid var(--line)}
+.bars{min-width:780px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:14px}
+.barrow{display:grid;grid-template-columns:repeat(12,1fr);gap:8px}
+.slot{display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0}
+.ico{position:relative;width:52px;height:52px;border-radius:6px;border:2px solid var(--slotedge);background:var(--keymute);overflow:hidden;flex:none}
+.ico img{width:100%;height:100%;display:block}
+.slot.empty .ico{border-style:dashed}
+.hk{position:absolute;top:1px;right:2px;font:600 .68rem var(--mono);color:#fff;text-shadow:0 0 2px #000,0 0 2px #000,0 1px 2px #000}
+.slot.empty .hk{color:var(--muted);text-shadow:none}
+.sn{position:absolute;bottom:1px;left:3px;font:400 .6rem var(--mono);color:#fff;opacity:.85;text-shadow:0 0 2px #000,0 0 2px #000}
+.slot.empty .sn{color:var(--muted);text-shadow:none}
+.nm{font-size:.72rem;line-height:1.15;text-align:center;overflow-wrap:anywhere}
+
+.mouse{min-width:640px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;display:grid;grid-template-columns:1fr 220px;gap:20px;align-items:start}
+.mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.mgrid .key{min-height:74px}
+.mtop{display:flex;flex-direction:column;gap:8px}
+.blocks{display:flex;gap:28px;flex-wrap:wrap}
+.blocks>div{display:flex;flex-direction:column;gap:8px}
+.block{display:grid;grid-template-columns:repeat(3,64px);gap:8px}
+.key.off{opacity:.45}
+.key.modk{border-style:dashed}
+.slot.off .ico img{filter:grayscale(1);opacity:.4}
+.slot.off .nm{color:var(--muted)}
+.now{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--def);border-radius:8px;padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.warn{border-left-color:var(--shift)}
+details{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+details>summary{cursor:pointer;font-weight:600}
+details[open]>summary{margin-bottom:10px}
+details>*+*{margin-top:10px}
+.tag23{font:600 .68rem var(--mono);color:var(--muted)}
+</style>
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:10px">
+    <h1>Frost Mage on the Tartarus V2</h1>
+    <p class="lede">Wesheavyn, level 29 Troll Frost Mage, with the Tartarus under the left hand and the Scimitar under the right. Everything here is checked against the Forever beta spell data, not Classic. Greyed-out spells are ones you have not learned yet.</p>
+  </header>
+
+  <section>
+    <h2>Do this now</h2>
+    <div class="now">
+      <ol>
+        <li><b>Type <kbd>/reload</kbd>.</b></li>
+        <li><b>Log in, stand still out of combat for five seconds.</b> Chat says "Layout applied" and lists what moved.</li>
+        <li><b>Type <kbd>/torch map</kbd></b> to see every key in chat.</li>
+        <li><b>Play for an hour, then type <kbd>/torch stats</kbd>.</b> It tells you what you clicked, what you fumbled and what did nothing.</li>
+        <li><b>Do not like it?</b> <kbd>/torch undo</kbd> puts the bars and binds back exactly as they were before any of this.</li>
+      </ol>
+      <p class="note">You never run a setup command. New ranks, new spells, a better potion, a new scroll or your first mount all go to their key by themselves.</p>
+    </div>
+    <div class="now warn">
+      <p><b>What changed on October 10</b></p>
+      <ul>
+        <li><b>Each bar is now one device.</b> Left hand on the main bar, left hand + Shift above it, and your mouse thumb buttons as two blocks in the bottom right, shaped like the mouse. No key changed, only where the squares sit.</li>
+        <li><b>Every mage spell in Forever has a home.</b> Combat spells on keys, buffs, conjures, teleports and portals on the click bars, and any spell the addon has never heard of is still put on a bar.</li>
+        <li><b>Your pinky has nothing to do.</b> The Ctrl layer is gone. Its spells moved to the mouse thumb grid, with Shift (your thumb) as the only modifier.</li>
+        <li><b>Ice Lance, Cone of Cold, Fire Blast, Counterspell, Blink and Ice Block cancel your cast and fire at once.</b> The price is real: press one while it is on cooldown and you still lose the cast you were making.</li>
+        <li><b>Rank 1 Frostbolt</b> is on thumb + <kbd>R</kbd>. A 1.5 second cast for the slow, not the damage.</li>
+        <li><b>The bandage always bandages you.</b> Health potion and bandage both stop your cast first. Each key uses the best one in your bags that you are high enough level for.</li>
+        <li><b>Decurse:</b> hold thumb Shift and press <kbd>3</kbd> with the mouse over anyone or any party frame. Or middle-click a party, raid or player frame.</li>
+        <li><b>Mouse 4 and mouse 5</b> are bound to Polymorph and Counterspell, waiting for the mouse fix below.</li>
+        <li><b>Wheel click</b> targets the next enemy, so you do not need the pinky on Tab.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>Your mouse</h2>
+    <p>The thumb grid on the Scimitar is the answer to reaching for the top row. Your left hand keeps moving and your right thumb casts. The numbers match the numbers on your main bar.</p>
+    <div class="scroll">
+      <div class="mouse">
+        <div class="mgrid" id="mgrid"></div>
+        <div class="mtop">
+          <div class="cap">Behind the wheel</div>
+          <div class="key" style="--role:var(--ctl)"><div class="top"><span class="send">Mouse 5</span><span class="pos">front</span></div><div class="base">Counterspell</div><div class="shift">Counterspell focus</div></div>
+          <div class="key" style="--role:var(--ctl)"><div class="top"><span class="send">Mouse 4</span><span class="pos">back</span></div><div class="base">Polymorph</div><div class="shift">Polymorph focus</div></div>
+          <p class="note">These two still change your sensitivity. Freeing them needs one command typed by you, because it needs your password: <kbd>sudo apt install -y ckb-next</kbd>. Then tell me and I finish it.</p>
+        </div>
+      </div>
+    </div>
+    <p class="note">Start with the top two rows. Thumb 1 Polymorph and thumb 4 Counterspell are the two that matter in a panic. Hold the pad's thumb Shift with any button for the orange spell. The mount, mana potion and grenade buttons stay empty until you own one, then fill themselves.</p>
+  </section>
+
+  <section>
+    <h2>How you move</h2>
+    <p>Your left hand stays on the pad the whole time. W A S D are on the pad itself.</p>
+    <ul>
+      <li><b>Forward and back:</b> pad keys 08 (W) and 13 (S), middle finger.</li>
+      <li><b>Sidestep:</b> pad keys 12 (A) and 14 (D), ring and index finger. They strafe, they do not turn.</li>
+      <li><b>Turn with the mouse.</b> Hold the right mouse button and you face wherever the camera points.</li>
+      <li><b>Hold both mouse buttons to run forward.</b> That frees your whole left hand for spells.</li>
+      <li><b>Instant spells are cast on the move:</b> Frost Nova, Ice Lance, Fire Blast, Blink. Frostbolt makes you stand still, which is why you slow things first.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>The pad</h2>
+    <div class="legend">
+      <span><b style="color:var(--ink)">Bold</b> = press the key</span>
+      <span class="sh">Orange = thumb button (Shift) + key</span>
+      <span>Grey = not learned yet</span>
+    </div>
+    <div class="scroll">
+      <div class="pad">
+        <div class="keys" id="keys"></div>
+        <div class="thumb">
+          <div class="cap">Thumb</div>
+          <div class="key mute modk"><div class="top"><span class="send">Shift</span><span class="pos">button</span></div><div class="base sh">Hold for orange</div></div>
+          <div class="dpad">
+            <span></span>
+            <div class="key" style="--role:var(--def)"><div class="send">Up</div><div class="base">Health potion</div></div>
+            <span></span>
+            <div class="key" style="--role:var(--def)"><div class="send">Left</div><div class="base">Conjured water</div></div>
+            <span></span>
+            <div class="key" style="--role:var(--util)"><div class="send">Right</div><div class="base">Bandage</div></div>
+            <span></span>
+            <div class="key" style="--role:var(--def)"><div class="send">Down</div><div class="base">Conjured food</div></div>
+            <span></span>
+          </div>
+          <div class="key mute"><div class="top"><span class="send">Space</span><span class="pos">paddle</span></div><div class="base">Jump</div></div>
+        </div>
+      </div>
+    </div>
+    <p class="note">The small number in each key's corner is the number printed on the pad. It is only there so you can find the key. It has nothing to do with "Action Button" numbers in the game's menus. Go by the letter.</p>
+    <p class="note">The thumb d-pad is 8-way. Press straight up, down, left or right. A diagonal press sends two directions at once and can use the wrong item.</p>
+  </section>
+
+  <section>
+    <h2>Your bars</h2>
+    <p>Each bar on screen is one thing your hands do, and the squares are in the order the keys sit. If it does not look like this, type <kbd>/torch look devices</kbd>.</p>
+    <div class="scroll">
+      <div class="bars">
+        <div class="cap">Main bar, bottom of the screen: your left hand. Q E R F Z X C, a click square, then the thumb pad.</div>
+        <div class="barrow" id="vb1"></div>
+        <div class="cap">Bar above it: the same keys with thumb Shift. The last five squares are click buttons.</div>
+        <div class="barrow" id="vb2"></div>
+        <div class="blocks">
+          <div><div class="cap">Bottom right, left block: mouse thumb 1 to 12</div><div class="block" id="vb3"></div></div>
+          <div><div class="cap">Right block: Shift + mouse thumb</div><div class="block" id="vb4"></div></div>
+        </div>
+        <div class="cap">One more row, right of the Shift bar: buffs, conjures, teleports and scrolls to click.</div>
+      </div>
+    </div>
+    <div class="scroll"><table><thead><tr><th>Type this</th><th>How the bars are drawn</th></tr></thead><tbody>
+      <tr><td><kbd>/torch look devices</kbd></td><td>The two mouse bars are 3-wide, 4-tall blocks in the bottom right corner, laid out like your thumb buttons. This is the default.</td></tr>
+      <tr><td><kbd>/torch look rows</kbd></td><td>The two mouse bars are strips down the right edge of the screen.</td></tr>
+      <tr><td><kbd>/torch look off</kbd></td><td>The screen layout you had before.</td></tr>
+    </tbody></table></div>
+    <p class="note">The looks are normal Edit Mode layouts called "Torch Devices" and "Torch Rows". To move a block, press Esc, open Edit Mode and drag it. Nothing else on your screen is touched.</p>
+    <h3>Not learned yet</h3>
+    <div class="scroll"><table><thead><tr><th>Key</th><th>Spell</th><th>You get it at</th></tr></thead><tbody id="later"></tbody></table></div>
+    <p class="note">Anything listed here goes onto its key by itself when you train it. Health potions in Forever are made with First Aid, not Alchemy.</p>
+  </section>
+
+  <section>
+    <h2>Five habits</h2>
+    <ul>
+      <li><b>Nova, step out, Ice Lance, Frostbolt.</b> <kbd>Q</kbd> freezes them. Sidestep out of melee range, press <kbd>R</kbd> while you move (Ice Lance is instant and does 300% more damage to a frozen target), then start Frostbolt. Damage can break the freeze, so move first.</li>
+      <li><b>Ice Lance only on a frozen target.</b> A slowed mob is not frozen. On a mob that is only chilled it does 30 damage and wastes the cast.</li>
+      <li><b>Fire Blast finishes.</b> <kbd>Z</kbd> is instant. Use it on the run or to end a mob at a sliver of health.</li>
+      <li><b>Keep Blink for stuns and roots</b> when you can. <kbd>F</kbd> breaks both.</li>
+      <li><b>Never click a combat spell.</b> If you catch yourself clicking one, it needs a key. Tell me which and it gets one.</li>
+      <li><b>Interrupts and sheep go on the mouse.</b> Thumb 4 and thumb 1. Your left hand never stops moving to cast them.</li>
+      <li><b>Do not mash the instant keys during a cast you want.</b> <kbd>R</kbd>, <kbd>Z</kbd> and <kbd>2</kbd> now cancel Frostbolt the moment you press them. That is what you asked for, and it means a nervous early press throws the Frostbolt away.</li>
+      <li><b>Rank 1 Frostbolt (thumb + <kbd>R</kbd>) is for runners and kiting.</b> In the current Forever beta it no longer triggers Frostbite or any other talent at 60, so it is a slow and nothing else.</li>
+      <li><b>Bandage after a Polymorph or a Nova,</b> pad right. It always lands on you now, whatever you have targeted.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Focus in one example</h2>
+    <div class="focus">
+      <p><b>Your target</b> is the enemy you are killing. <b>Your focus</b> is a second enemy the game remembers for you, with its own portrait. A focus macro casts on that second enemy without dropping your target.</p>
+      <p>Thumb Shift + <kbd>Tab</kbd> (or Shift + wheel click) saves whoever you are targeting as your focus.</p>
+      <ol>
+        <li>Two mobs. Click the dangerous one and press Shift + wheel click. It is now your focus.</li>
+        <li>Hold thumb Shift and press mouse thumb <kbd>1</kbd> (or pad <kbd>1</kbd>). Polymorph lands on it.</li>
+        <li>Press <kbd>Tab</kbd> and kill the other mob.</li>
+        <li>The sheep breaks early. Shift + <kbd>1</kbd> again. It is sheeped again and you never changed target.</li>
+        <li>First mob dies. Click the sheep, or press <kbd>Tab</kbd>, and finish it.</li>
+      </ol>
+      <p class="note">Polymorph only works on Beasts, Humanoids and Critters, and any damage breaks it, so keep Blizzard and Arcane Explosion away from the sheep. Counterspell works the same way: Shift + <kbd>4</kbd> interrupts your focus without dropping your target.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>When Frostbolt does not work</h2>
+    <p>A few mobs are immune to Frost, mostly water and ice elementals. You cannot slow or freeze them, so they will reach you. These are Forever beta tooltip numbers with no gear and no talents, read from the game data, not tested in a fight.</p>
+    <div class="scroll"><table><thead><tr><th>Spell</th><th>Key</th><th>Damage</th><th>Cast</th><th>Per second</th><th>Mana</th></tr></thead><tbody>
+      <tr><td>Fireball rank 5</td><td>thumb + <kbd>E</kbd></td><td>114 + 16 burn</td><td>3.5 s</td><td>37</td><td>140</td></tr>
+      <tr><td>Arcane Missiles rank 3</td><td>mouse thumb <kbd>10</kbd></td><td>230 over the channel</td><td>5 s channel</td><td>46</td><td>235</td></tr>
+      <tr><td>Scorch rank 1</td><td>mouse thumb <kbd>11</kbd></td><td>42</td><td>1.5 s</td><td>28</td><td>50</td></tr>
+      <tr><td>Fire Blast rank 3</td><td><kbd>Z</kbd></td><td>107</td><td>Instant, 8 s cooldown</td><td></td><td>115</td></tr>
+    </tbody></table></div>
+    <ol>
+      <li><b>Open with Fireball from max range.</b> It reaches 35 yards. Frostbolt, Scorch and Arcane Missiles reach 30 and Fire Blast 20.</li>
+      <li><b>Then Arcane Missiles.</b> It is the stronger of the two per second. It is a channel, so every hit you take cuts it short.</li>
+      <li><b>Getting beaten on? Scorch.</b> Short casts lose less to being hit. It is the weakest, so it is the fallback.</li>
+      <li><b>Fire Blast whenever it is ready.</b></li>
+    </ol>
+    <p class="note">Always use your highest rank. Against anything that can be chilled, Frostbolt stays your main spell: its slow is what keeps mobs off you, and your talents are in Frost.</p>
+  </section>
+
+  <section>
+    <h2>Your troll racials</h2>
+    <div class="scroll"><table><thead><tr><th>Racial</th><th>What it does</th><th>Key</th></tr></thead><tbody>
+      <tr><td><b>Rapid Regeneration</b></td><td>New in Forever. A channel: 50% of your health back over 6 seconds, 3 minute cooldown. Moving, casting or taking damage cancels it.</td><td>thumb + <kbd>5</kbd></td></tr>
+      <tr><td>Berserking</td><td>Instant. 10% faster casting and attacks for 10 seconds, 3 minute cooldown.</td><td>thumb + <kbd>Q</kbd></td></tr>
+      <tr><td>Regeneration</td><td>Passive. Nothing to bind.</td><td class="note">none</td></tr>
+      <tr><td>Beast Slaying</td><td>Passive. 5% more damage to Beasts.</td><td class="note">none</td></tr>
+    </tbody></table></div>
+    <p class="note">Rapid Regeneration will not save you mid-fight, because any hit cancels it. Use it between pulls instead of eating, or right after you sheep the last mob.</p>
+  </section>
+
+  <section>
+    <h2>Presets and stats</h2>
+    <div class="scroll"><table><thead><tr><th>Type this</th><th>What you get</th></tr></thead><tbody>
+      <tr><td><kbd>/torch preset tartarus</kbd></td><td>What this page shows. One modifier, on your thumb. Nothing on the pinky. You are on this one.</td></tr>
+      <tr><td><kbd>/torch preset keyboard</kbd></td><td>Same bars on a normal keyboard. Ctrl comes back as a second modifier.</td></tr>
+      <tr><td><kbd>/torch preset thumbmove</kbd></td><td>Experimental. The thumb pad walks, and W A S D become Counterspell, Polymorph, Cone of Cold and Arcane Explosion. This is what most Tartarus players run. Your thumb cannot hold Shift while it steers.</td></tr>
+      <tr><td><kbd>/torch preset xaryu</kbd></td><td>The twelve binds Xaryu showed for Classic in 2019 (Frostbolt 3, Frost Nova Tab, Polymorph wheel down, Fire Blast mouse 5, Ice Block mouse 4). The rest is the keyboard preset, because he never showed the rest.</td></tr>
+      <tr><td><kbd>/torch stats</kbd></td><td>What you clicked in a fight, which presses did nothing and why, two neighbouring keys hit at once, keys with nothing on them, casts you cut short by moving. Kept separately for each preset, so two weeks on each gives a real comparison.</td></tr>
+    </tbody></table></div>
+    <p class="note">The bars are the same in every preset. Only the keys change, so switching costs nothing.</p>
+  </section>
+
+  <section>
+    <h2>What the evidence says</h2>
+    <ul>
+      <li><b>Every well-known mage found plays keyboard and mouse.</b> None uses a keypad. Only one has a sourced Classic layout, <a href="https://www.youtube.com/watch?v=9oczv7DEWyI">Xaryu in 2019</a>, and it covers about a dozen binds. Nobody's Forever mage binds are published yet.</li>
+      <li><b>They all agree on one thing:</b> instant, reactive spells on the mouse, the cast rotation on the left hand. Nobody puts Frostbolt on a thumb grid. Your layout follows that.</li>
+      <li><b>Tartarus players:</b> of 26 WoW users found, 17 move with the thumb pad and 9 keep movement on the keys like you. People who run a keypad together with a 12-button mouse (14 found) mostly split it your way.</li>
+      <li><b>Weak pinky:</b> the one player found with the same problem and the same kind of mouse was told to take every modifier off the left pinky. That is why Ctrl is gone here.</li>
+      <li><b>Stop-casting on instants</b> is universal on Counterspell and common on Blink and Ice Block. On damage instants it is rarer, because it skips the game's spell queue.</li>
+      <li><b>No measured comparison of keypad against keyboard exists.</b> Your own stats are the only real test. Give each two weeks.</li>
+    </ul>
+    <p class="note">Counts come from comments under keypad videos and a vendor forum, so people who gave the pad up are under-counted. Reddit could not be read.</p>
+  </section>
+
+  <section>
+    <h2>If something is wrong</h2>
+    <ul>
+      <li><b>A key does nothing or does the wrong thing:</b> type <kbd>/torch binds</kbd>. It re-applies every bind on this page.</li>
+      <li><b>A spell is on the wrong key:</b> <kbd>/torch setup</kbd> forces the layout again. Anything of yours in the way is moved to a free slot, not deleted.</li>
+      <li><b>You moved a key on purpose:</b> it stays. The addon only fills empty slots and updates ranks after the first run.</li>
+      <li><b>Back to how it was:</b> <kbd>/torch undo</kbd>.</li>
+      <li><b>Bind one square yourself:</b> Esc, Options, Keybindings, the red <b>Quick Keybind Mode</b> button. Hover a square, press the key, click Okay.</li>
+      <li><b>The thumb button is not acting as Shift:</b> tell me. That is the pad remap, not the game.</li>
+      <li><b>Slow Fall</b> (Shift + mouse thumb <kbd>8</kbd>) needed a Light Feather in Classic. If it will not cast, that is why.</li>
+      <li><b>You cannot find a buff or a scroll:</b> there are 18 click squares. Anything past that is on Action Bar 6. Switch it on under Options, Action Bars.</li>
+      <li><b>The mouse blocks cover something,</b> or sit in the wrong place: Esc, Edit Mode, drag them. Or <kbd>/torch look rows</kbd>.</li>
+    </ul>
+    <details><summary>The macros the addon keeps in your game</summary>
+      <p class="note">Besides these it makes one stop-casting macro per instant (named like "Ice Lance!"), "Health Pot", "Bandage Self", "Decurse", "Frostbolt R1" and, once you own one, "Mount". If you already have a macro with one of those names, yours is left alone and used as it is.</p>
+      <div class="macro"><header><h3>Poly Focus, on thumb + 1</h3><button class="copy" id="c6" data-t="m6">Copy</button></header><pre id="m6">#showtooltip Polymorph
+/cast [@focus,exists,harm,nodead] Polymorph; Polymorph</pre></div>
+      <div class="macro"><header><h3>Counterspell!, on 4 and mouse 5</h3><button class="copy" id="c7" data-t="m7">Copy</button></header><pre id="m7">#showtooltip Counterspell
+/stopcasting
+/cast Counterspell</pre></div>
+      <div class="macro"><header><h3>Counterspell Foc, on thumb + 4</h3><button class="copy" id="c8" data-t="m8">Copy</button></header><pre id="m8">#showtooltip Counterspell
+/stopcasting
+/cast [@focus,exists,harm,nodead] Counterspell; Counterspell</pre></div>
+      <div class="macro"><header><h3>Mana Gem, on thumb + C and mouse 9</h3><button class="copy" id="c9" data-t="m9">Copy</button></header><pre id="m9">#showtooltip
+/use Mana Ruby
+/use Mana Citrine
+/use Mana Jade
+/use Mana Agate</pre></div>
+    </details>
+  </section>
+
+  <section>
+    <h2>Later levels, and every spell's home</h2>
+    <div class="scroll"><table><thead><tr><th>Spell</th><th>Level</th><th>Where</th></tr></thead><tbody>
+      <tr><td>Ice Armor, then Mage Armor</td><td>30, 34</td><td>Replace Frost Armor in its click slot</td></tr>
+      <tr><td>Mana Jade, Citrine, Ruby</td><td>38, 48, 58</td><td>Same gem key. It uses whichever gem you carry</td></tr>
+      <tr><td>Frostfire Bolt, Ice Barrier</td><td>40</td><td>They take thumb + <kbd>E</kbd> and <kbd>5</kbd> by themselves. Fireball and Mana Shield move to the click bars</td></tr>
+      <tr><td>Mount</td><td>40</td><td>Mouse thumb <kbd>12</kbd>, the day you own one</td></tr>
+      <tr><td>Mana potion, grenades</td><td></td><td>Shift + mouse thumb <kbd>9</kbd> and <kbd>11</kbd>, as soon as one is in your bags</td></tr>
+      <tr><td>Buffs, conjures, teleports, portals, scrolls</td><td></td><td>The click bars on the right. Never in a fight</td></tr>
+    </tbody></table></div>
+    <p class="note">This layout is yours. The guild's public mage guide uses the same keys for the main spells but places a few situational ones differently (for example Rapid Regeneration and Arcane Missiles), because it has to work for every race and for players without a Ctrl key on their pad.</p>
+  </section>
+</div>
+
+<script>
+const LEVEL=29;
+// k = letter the key sends, p = number printed on the pad. b/s/c = plain, Shift, Ctrl. l = level learned (0 = known).
+const K=[
+ {p:'01',k:'1',r:'ctl',b:['Polymorph','spell_nature_polymorph',8],s:['Polymorph focus','spell_nature_polymorph',8]},
+ {p:'02',k:'2',r:'dmg',b:['Cone of Cold','spell_frost_glacier',26],s:['Blizzard','spell_frost_icestorm',20]},
+ {p:'03',k:'3',r:'dmg',b:['Arcane Explosion','spell_nature_wispsplode',14],s:['Decurse, mouse over them','spell_nature_removecurse',18]},
+ {p:'04',k:'4',r:'ctl',b:['Counterspell','spell_frost_iceshock',24],s:['Counterspell focus','spell_frost_iceshock',24]},
+ {p:'05',k:'5',r:'def',b:['Mana Shield','spell_shadow_detectlesserinvisibility',20],s:['Rapid Regeneration','ability_racial_regeneratin',0]},
+ {p:'06',k:'Tab',r:'ctl',b:['Next enemy (or wheel click)'],s:['Set focus'],nb:1},
+ {p:'07',k:'Q',r:'ctl',b:['Frost Nova','spell_frost_frostnova',10],s:['Berserking','racial_troll_berserk',0]},
+ {p:'08',k:'W',b:['Forward'],m:1},
+ {p:'09',k:'E',r:'dmg',b:['Frostbolt','spell_frost_frostbolt02',4],s:['Fireball','spell_fire_flamebolt',1]},
+ {p:'10',k:'R',r:'dmg',b:['Ice Lance','spell_frost_frostblast',20],s:['Frostbolt rank 1','spell_frost_frostbolt02',4]},
+ {p:'11',k:'',b:['Not used'],m:1},
+ {p:'12',k:'A',b:['Sidestep left'],m:1},
+ {p:'13',k:'S',b:['Backward'],m:1},
+ {p:'14',k:'D',b:['Sidestep right'],m:1},
+ {p:'15',k:'F',r:'def',b:['Blink','spell_arcane_blink',20]},
+ {p:'16',k:'Shift',b:['Also Shift'],m:1,mod:'sh'},
+ {p:'17',k:'Z',r:'dmg',b:['Fire Blast','spell_fire_fireball',6],s:['Evocation','spell_nature_purge',20]},
+ {p:'18',k:'X',r:'def',b:['Ice Block','spell_frost_frost',25],s:['Cold Snap','spell_frost_wizardmark',29]},
+ {p:'19',k:'C',r:'util',b:['Wand','ability_shootwand',0],s:['Mana gem','inv_misc_gem_emerald_01',28]}
+];
+const B3=[['1','Polymorph','spell_nature_polymorph'],['2','Cone of Cold','spell_frost_glacier'],['3','Arcane Explosion','spell_nature_wispsplode'],
+ ['4','Counterspell','spell_frost_iceshock'],['5','Mana Shield','spell_shadow_detectlesserinvisibility'],['6','Blizzard','spell_frost_icestorm'],
+ ['7','Cold Snap','spell_frost_wizardmark'],['8','Evocation','spell_nature_purge'],['9','Mana gem','inv_misc_gem_emerald_01'],
+ ['0','Arcane Missiles','spell_nature_starfall'],['-','Scorch','spell_fire_soulburn'],['=','Mount, at 40','ability_mount_raptor',1]];
+const B4=[['s-1','Polymorph focus','spell_nature_polymorph'],['s-2','Blizzard','spell_frost_icestorm'],['s-3','Decurse','spell_nature_removecurse'],
+ ['s-4','Counterspell focus','spell_frost_iceshock'],['s-5','Rapid Regen','ability_racial_regeneratin'],['s-6','Frost Ward','spell_frost_frostward'],
+ ['s-7','Fire Ward','spell_fire_firearmor'],['s-8','Slow Fall','spell_magic_featherfall'],['s-9','Mana potion','inv_potion_72',1],
+ ['s-0','Flamestrike','spell_fire_selfdestruct'],['s--','Grenade','',1],['s-=','Hearthstone','inv_misc_rune_01']];
+const PADKEYS=['Q','E','R','F','Z','X','C'];
+const DP=[['Up','Health potion','inv_potion_51'],['Down','Conjured food','inv_misc_food_11'],['Left','Conjured water','inv_drink_07'],['Right','Bandage, on you','inv_misc_bandage_02']];
+// the Scimitar thumb grid, in the order the buttons are printed. [button, spell, Shift spell, role]
+const MG=[['1','Polymorph','Polymorph focus','ctl'],['2','Cone of Cold','Blizzard','dmg'],['3','Arcane Explosion','Decurse, mouse over them','dmg'],
+ ['4','Counterspell','Counterspell focus','ctl'],['5','Mana Shield','Rapid Regeneration','def'],['6','Blizzard','Frost Ward','dmg'],
+ ['7','Cold Snap','Fire Ward','def'],['8','Evocation','Slow Fall','util'],['9','Mana gem','Mana potion','util'],
+ ['10','Arcane Missiles','Flamestrike','dmg'],['11','Scorch','Grenade','dmg'],['12','Mount','Hearthstone','util']];
+document.getElementById('mgrid').innerHTML=MG.map(m=>`<div class="key${m[3]?'':' mute'}"${m[3]?` style="--role:var(--${m[3]})"`:''}><div class="top"><span class="send">${m[0]}</span><span class="pos">thumb</span></div><div class="base">${m[1]}</div>${m[2]?`<div class="shift">${m[2]}</div>`:''}</div>`).join('');
+const off=x=>x&&x[2]>LEVEL;
+const img=(n)=>n?`<img src="icons/${n}.jpg" alt="" width="56" height="56">`:'';
+const line=(x,cls)=>x?`<div class="${cls}"${off(x)?' style="opacity:.5"':''}>${x[0]}${off(x)?` <span class="lvl">at ${x[2]}</span>`:''}</div>`:'';
+document.getElementById('keys').innerHTML=K.map(x=>
+ `<div class="key${x.m?' mute':''}${x.mod?' modk':''}${!x.m&&off(x.b)&&(!x.s||off(x.s))&&(!x.c||off(x.c))?' off':''}"${x.r?` style="--role:var(--${x.r})"`:''}>
+   <div class="top"><span class="send">${x.k}</span><span class="pos">${x.p}</span></div>
+   ${x.mod?`<div class="base ${x.mod}">${x.b[0]}</div>`:line(x.b,'base')}${line(x.s,'shift')}${line(x.c,'ctrl')}
+  </div>`).join('');
+const slots=K.filter(x=>!x.m&&!x.nb);
+const slot=(key,x,empty)=>x?`<div class="slot${x[1]?'':' empty'}${off(x)?' off':''}"><div class="ico">${img(x[1])}${key?`<span class="hk">${key}</span>`:''}</div><div class="nm">${x[0]}${off(x)?` <span class="lvl">at ${x[2]}</span>`:''}</div></div>`
+ :`<div class="slot empty"><div class="ico"></div><div class="nm">${empty||''}</div></div>`;
+const cell=x=>`<div class="slot${x[2]?'':' empty'}${x[3]?' off':''}"><div class="ico">${img(x[2])}${x[0]?`<span class="hk">${x[0]}</span>`:''}</div><div class="nm">${x[1]}</div></div>`;
+const byKey=k=>K.find(x=>x.k===k);
+document.getElementById('vb1').innerHTML=PADKEYS.map(k=>slot(k,byKey(k).b)).join('')+cell(['','Click',''])+DP.map(cell).join('');
+document.getElementById('vb2').innerHTML=PADKEYS.map(k=>k==='F'?cell(['','Empty','']):slot('S-'+k,byKey(k).s,'Empty')).join('')+Array(5).fill(cell(['','Click',''])).join('');
+document.getElementById('vb3').innerHTML=B3.map(cell).join('');
+document.getElementById('vb4').innerHTML=B4.map(cell).join('');
+const later=[];
+slots.forEach(x=>{[['',x.b],['thumb + ',x.s]].forEach(([m,v])=>{if(off(v))later.push([v[2],`<tr><td>${m}<kbd>${x.k}</kbd></td><td>${v[0]}</td><td>Level ${v[2]}</td></tr>`])})});
+document.getElementById('later').innerHTML=later.sort((a,b)=>a[0]-b[0]).map(r=>r[1]).join('')||'<tr><td colspan="3">Nothing. You know every spell on this layout.</td></tr>';
+document.querySelectorAll('button.copy').forEach(b=>b.addEventListener('click',()=>{
+  const el=document.getElementById(b.dataset.t);
+  const done=()=>{b.textContent='Copied';setTimeout(()=>b.textContent='Copy',1500)};
+  const sel=()=>{const r=document.createRange();r.selectNodeContents(el);const s=getSelection();s.removeAllRanges();s.addRange(r);b.textContent='Selected, press Ctrl+C'};
+  try{navigator.clipboard.writeText(el.textContent).then(done,sel)}catch(e){sel()}
+}));
+</script>
