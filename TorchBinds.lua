@@ -21,7 +21,7 @@
 
 local ADDON, ns = ...
 
-local LAYOUT_VERSION = 12
+local LAYOUT_VERSION = 13
 -- Seven bars, one per thing your hands do. Each is one row of twelve action slots.
 -- Two hands, two modifiers: Shift under the thumb, Alt on the pad key above it. That is
 -- three layers for the left hand and three for the mouse, and nothing on the pinky.
@@ -752,8 +752,12 @@ local LAYOUT = {
         -- Thumb 7 and up are a reach on this mouse, so nothing that decides a fight lives there.
         [MOUSE] = grid({ POLY_FOC, stop("Cone of Cold"), "Arcane Explosion", stop("Counterspell"), "Blizzard", "Arcane Missiles",
                          "Frost Ward", "Fire Ward", false, "Flamestrike", FROST_R1, MOUNT }),
-        -- Shift + mouse thumb buttons 1 to 12
-        [MSHIFT] = grid({ "Polymorph", "Blast Wave", "Remove Lesser Curse", CS_FOC, SHIELD_OFF, racial(2),
+        -- Shift + mouse thumb buttons 1 to 12. Thumb 2 is the second racial: it is also on the
+        -- pad's top row, so the left hand reaches it while the right hand loots, which is exactly
+        -- what Feed, pressed over a corpse after every pack, wants. Blast Wave lives at thumb 6:
+        -- a mage outside the fire tree never learns it, and a spell that may never exist must
+        -- not hold a key the pad can reach.
+        [MSHIFT] = grid({ "Polymorph", racial(2), "Remove Lesser Curse", CS_FOC, SHIELD_OFF, "Blast Wave",
                           "Slow Fall", false, item("manapotion"), first("Ice Armor", "Frost Armor"), item("grenade"), item("hearth") }),
         -- Alt + mouse thumb buttons 1 to 12: the mouseover versions, and everything you set up with
         -- Thumb 9 to 12 with Alt are left empty on purpose. They are in the pool below, so the

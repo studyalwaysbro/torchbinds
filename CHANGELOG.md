@@ -1,6 +1,18 @@
 # Torch Binds changelog
 
-## 8.2 — 2026-11-08 (installed, not yet released)
+## 8.2.1 — 2026-11-09
+- Feed (the Forsaken Cannibalize macro) moves from Shift + thumb 6 to Shift + thumb 2. Thumb 2
+  is also the pad's top row, so the hand that just finished the pack reaches it without the
+  mouse; a button pressed over a corpse after every pull belongs there. Blast Wave, which held
+  that square, takes thumb 6 instead: a mage outside the fire tree never learns it, and a spell
+  that may never exist should not hold a key the pad can reach. Until you learn Blast Wave the
+  square is empty and its key stays unbound, which is the addon's standing rule: a key is only
+  bound while something lives on its square. That rule is also why dragging a spell onto an
+  empty square shows no hotkey until the layout blesses it.
+- LAYOUT_VERSION 13: one forced re-setup at next login moves Feed and binds Shift+2.
+- Tests: run 378, v11 180, fuzz seeds clean.
+
+## 8.2 — 2026-11-08
 - The Alt layers (ALT and MALT) no longer live on Action Bars 6 and 7. The live Forever client
   silently refuses every placement into slots 145+, so since launch nothing had ever landed
   there: no Mage Armor, no racials, no buffs, and Alt keys that pressed empty squares. Each Alt

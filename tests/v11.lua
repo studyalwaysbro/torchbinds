@@ -71,7 +71,7 @@ end
 load(true)
 eq(cast("ALT-Q"), "Free Me", "undead: Will of the Forsaken is on Alt+Q")
 eq(G.macros["Free Me"], "#showtooltip Will of the Forsaken\n/stopcasting\n/cast Will of the Forsaken", "undead: the escape stops the cast it was in")
-eq(cast("SHIFT-6"), "Feed", "undead: Cannibalize is on Shift + thumb 6")
+eq(cast("SHIFT-2"), "Feed", "undead: Cannibalize is on Shift + thumb 2, the pad's top row")
 check(not whereIs("Berserking"), "undead: no troll racial anywhere")
 check(not whereIs("Rapid Regeneration"), "undead: no troll regeneration anywhere")
 -- Touch of the Grave and Underwater Breathing are passive: they must never take a button

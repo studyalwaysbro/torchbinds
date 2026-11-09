@@ -83,8 +83,8 @@ local ns = load()
 
 -- 1. first login on the new version: the whole layout is applied by itself --------------
 fire("PLAYER_ENTERING_WORLD", true, false)
-eq(TorchBindsDB.layoutVersion, 12, "layout version recorded")
-eq(TorchBindsDB.appliedVersion, 12, "binds version recorded")
+eq(TorchBindsDB.layoutVersion, 13, "layout version recorded")
+eq(TorchBindsDB.appliedVersion, 13, "binds version recorded")
 eq(#(TorchBindsDB.log or {}), 0, "nothing went wrong: " .. table.concat(TorchBindsDB.log or {}, " | "))
 if arg[2] == "dump" then
   local keys = {}
@@ -108,7 +108,7 @@ local KEYMAP = {
   ["1"] = "Poly Focus", ["2"] = "Cone of Cold!", ["3"] = "Arcane Explosion", ["4"] = "Counterspell!", ["5"] = "Blizzard", ["6"] = "Arcane Missiles",
   ["7"] = "Frost Ward", ["8"] = "Fire Ward", ["0"] = "Flamestrike", ["-"] = "Frostbolt R1",
   ["SHIFT-1"] = "Polymorph", ["SHIFT--"] = "Scroll of Cryoblast", ["SHIFT-3"] = "Remove Lesser Curse", ["SHIFT-4"] = "Counterspell Foc", ["SHIFT-5"] = "Shield Off",
-  ["SHIFT-6"] = "Feed", ["SHIFT-7"] = "Slow Fall", ["SHIFT-0"] = "Ice Armor", ["SHIFT-="] = "Hearthstone",
+  ["SHIFT-2"] = "Feed", ["SHIFT-7"] = "Slow Fall", ["SHIFT-0"] = "Ice Armor", ["SHIFT-="] = "Hearthstone",
   ["ALT-1"] = "Poly Over", ["ALT-2"] = "CS Mouseover", ["ALT-3"] = "Arcane Intellect", ["ALT-5"] = "Dampen Magic", ["ALT-6"] = "Amplify Magic",
   BUTTON4 = "Poly Focus", BUTTON5 = "Counterspell!", ["SHIFT-BUTTON4"] = "Polymorph", ["SHIFT-BUTTON5"] = "Counterspell Foc",
   ["ALT-BUTTON4"] = "Poly Over",
@@ -314,7 +314,7 @@ eq(rank(slotOf("E")), 8408, "caught up after combat")
 SlashCmdList["TORCHBINDS"]("preset keyboard") runTimers()
 eq(TorchBindsDB.preset, "keyboard", "preset saved")
 eq(cast("CTRL-Q"), "Arcane Missiles", "keyboard preset: Ctrl+Q is what thumb 6 is")
-eq(cast("CTRL-1"), "Feed", "keyboard preset: Ctrl+1 is what Shift + thumb 6 is")
+eq(cast("CTRL-5"), "Ice Armor", "keyboard preset: Ctrl+5 is what Shift + thumb 10 is")
 eq(cast("E"), "Frostbolt", "the main keys are the same in every preset")
 SlashCmdList["TORCHBINDS"]("preset xaryu") runTimers()
 for key, spell in pairs({ ["3"] = "Frostbolt", TAB = "Frost Nova", ["1"] = "Cone of Cold!", ["5"] = "Fireball R1", BUTTON5 = "Fire Blast!", BUTTON4 = "Ice Block!",
@@ -817,7 +817,7 @@ TorchBindsDB = {}
 G.class = "WARRIOR"
 ns = load()
 fire("PLAYER_ENTERING_WORLD", true, false)
-eq(TorchBindsDB.layoutVersion, 12, "no layout: marked done")
+eq(TorchBindsDB.layoutVersion, 13, "no layout: marked done")
 eq(#(TorchBindsDB.log or {}), 0, "no layout: nothing logged: " .. table.concat(TorchBindsDB.log or {}, " | "))
 
 -- 11. the game answers "empty" for every slot at once: no key is taken away -------------------------------
