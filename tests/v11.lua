@@ -15,6 +15,8 @@ local BUTTON_FIRST = { ACTIONBUTTON = 1, MULTIACTIONBAR1BUTTON = 61, MULTIACTION
 local function slotOf(key)
   local command = G.binds[key]
   if not command then return nil end
+  local mp, p = command:match("^CLICK TorchBinds(M?)Alt(%d+):LeftButton$")
+  if p then return (mp == "M" and 157 or 145) + tonumber(p) - 1 end
   for prefix, first in pairs(BUTTON_FIRST) do
     local n = command:match("^" .. prefix .. "(%d+)$")
     if n then return first + tonumber(n) - 1 end

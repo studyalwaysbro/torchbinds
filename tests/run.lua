@@ -11,7 +11,20 @@ package.path = "tests/?.lua;" .. package.path
 local M = require("mock")
 local G, ITEM, spellName, runTimers, fire, at, rank, whereIs, press, click = M.G, M.ITEM, M.spellName, M.runTimers, M.fire, M.at, M.rank, M.whereIs, M.press, M.click
 local say = io.write
-for key, a in pairs(saved.actions) do G.slots[tonumber(key:sub(2))] = { kind = a.kind, id = a.id, text = a.kind == "macro" and a.text or nil } end
+-- The sim's world has to own what the live bars hold, or the forced re-arrange below could not
+-- pick these real actions up again: an item on a bar is also in the bags, a bar macro exists,
+-- and an off-book spell (a profession) gets its name from the dump.
+for key, a in pairs(saved.actions) do
+  G.slots[tonumber(key:sub(2))] = { kind = a.kind, id = a.id, text = a.kind == "macro" and a.text or nil }
+  if a.kind == "item" and not G.bags[a.id] then G.bags[a.id] = 1 end
+  if a.kind == "macro" and a.text and G.macros[a.text] == nil then G.macros[a.text] = "old" end
+  if a.kind == "spell" and a.id and a.name and not spellName[a.id] then spellName[a.id] = a.name end
+end
+-- The Shift+F square (slot 64) holds whatever the live game last had there. The check below
+-- needs the OLD premise: an older layout's stray copy of a spell the new layout places on a
+-- fixed key. Plant one (Evocation lives on Shift+Z), so the sweep that clears copies is always
+-- exercised no matter what the live SV happens to hold at 64.
+G.slots[64] = { kind = "spell", id = 12051 }
 for _, sp in ipairs(saved.spells) do G.book[sp.slot] = { name = sp.name, spellID = sp.id, itemType = sp.type, isPassive = sp.passive, sub = sp.sub } end
 for cmd, keys in pairs(saved.binds) do for key in keys:gmatch("[^ ,]+") do G.binds[key] = cmd end end
 G.binds["SHIFT-MOUSEWHEELUP"], G.binds["BUTTON5"], G.binds["CTRL-E"] = "PREVIOUSACTIONPAGE", "MULTIACTIONBAR1BUTTON2", "MULTIACTIONBAR3BUTTON7"
@@ -27,6 +40,8 @@ local BUTTON = { ACTIONBUTTON = "ActionButton", MULTIACTIONBAR1BUTTON = "MultiBa
 local function slotOf(key)
   local command = G.binds[key]
   if not command then return nil end
+  local mp, cp = command:match("^CLICK TorchBinds(M?)Alt(%d+):LeftButton$")
+  if cp then return (mp == "M" and 157 or 145) + tonumber(cp) - 1 end
   local prefix, n = command:match("^(%u+%d?%u*)(%d+)$")
   for p, first in pairs(FIRST) do
     local m = command:match("^" .. p .. "(%d+)$")
@@ -52,13 +67,24 @@ local function load()
 end
 local original = {}
 for slot = 1, 180 do original[slot] = at(slot) end
+-- STALE-PREMISE GUARD: the live SV may already be on the current layout version (the real
+-- character has logged in with this build since this suite was written), which would turn the
+-- "first login on the new version" below into a silent no-op and leave every ALT-layer secure
+-- button empty. Force the recorded version down one so the upgrade path is always exercised,
+-- and drop the live undo/bindsBefore records so the sim's forced setup records its own:
+-- section 8 measures undo against the state THIS file loaded, not against the real character's
+-- bars from launch day.
+saved.layoutVersion = saved.layoutVersion and (saved.layoutVersion - 1)
+saved.undo, saved.bindsBefore = nil, nil
+-- the sim plays the character the SV describes; the racial keys depend on it
+G.race = (saved.character and saved.character.race) or G.race
 TorchBindsDB = saved
 local ns = load()
 
 -- 1. first login on the new version: the whole layout is applied by itself --------------
 fire("PLAYER_ENTERING_WORLD", true, false)
-eq(TorchBindsDB.layoutVersion, 11, "layout version recorded")
-eq(TorchBindsDB.appliedVersion, 11, "binds version recorded")
+eq(TorchBindsDB.layoutVersion, 12, "layout version recorded")
+eq(TorchBindsDB.appliedVersion, 12, "binds version recorded")
 eq(#(TorchBindsDB.log or {}), 0, "nothing went wrong: " .. table.concat(TorchBindsDB.log or {}, " | "))
 if arg[2] == "dump" then
   local keys = {}
@@ -74,15 +100,15 @@ local KEYMAP = {
   -- left hand
   Q = "Frost Nova", E = "Frostbolt", R = "Ice Lance!", F = "Blink!", Z = "Fire Blast!", X = "Ice Block!", C = "Shoot",
   ["SHIFT-E"] = "Scorch", ["SHIFT-R"] = "Fireball R1", ["SHIFT-Z"] = "Evocation", ["SHIFT-X"] = "Cold Snap", ["SHIFT-C"] = "Mana Gem",
-  UP = "Health Pot", DOWN = "Conjured Rye", LEFT = "Conjured Purified Water", RIGHT = "Bandage Self",
+  UP = "Health Pot", DOWN = "Conjured Pumpernickel", LEFT = "Conjured Spring Water", RIGHT = "Bandage Self",
   -- left hand with Alt, the pad key above Shift: the racial, the off-school nuke, the panic kit
-  ["ALT-Q"] = "Berserking", ["ALT-E"] = "Fireball", ["ALT-Z"] = "Mana Shield", ["ALT-X"] = "Trinkets", ["ALT-C"] = "Decurse",
+  ["ALT-Q"] = "Free Me", ["ALT-E"] = "Fireball", ["ALT-Z"] = "Mana Shield", ["ALT-X"] = "Trinkets", ["ALT-C"] = "Decurse",
   ["ALT-DOWN"] = "Conjure Food", ["ALT-LEFT"] = "Conjure Water", ["ALT-RIGHT"] = "Conjure Mana Agate",
   -- mouse thumb grid (1 to 5 are also the pad's top row)
   ["1"] = "Poly Focus", ["2"] = "Cone of Cold!", ["3"] = "Arcane Explosion", ["4"] = "Counterspell!", ["5"] = "Blizzard", ["6"] = "Arcane Missiles",
   ["7"] = "Frost Ward", ["8"] = "Fire Ward", ["0"] = "Flamestrike", ["-"] = "Frostbolt R1",
   ["SHIFT-1"] = "Polymorph", ["SHIFT--"] = "Scroll of Cryoblast", ["SHIFT-3"] = "Remove Lesser Curse", ["SHIFT-4"] = "Counterspell Foc", ["SHIFT-5"] = "Shield Off",
-  ["SHIFT-6"] = "Rapid Regeneration", ["SHIFT-7"] = "Slow Fall", ["SHIFT-0"] = "Frost Armor", ["SHIFT-="] = "Hearthstone",
+  ["SHIFT-6"] = "Feed", ["SHIFT-7"] = "Slow Fall", ["SHIFT-0"] = "Ice Armor", ["SHIFT-="] = "Hearthstone",
   ["ALT-1"] = "Poly Over", ["ALT-2"] = "CS Mouseover", ["ALT-3"] = "Arcane Intellect", ["ALT-5"] = "Dampen Magic", ["ALT-6"] = "Amplify Magic",
   BUTTON4 = "Poly Focus", BUTTON5 = "Counterspell!", ["SHIFT-BUTTON4"] = "Polymorph", ["SHIFT-BUTTON5"] = "Counterspell Foc",
   ["ALT-BUTTON4"] = "Poly Over",
@@ -119,22 +145,25 @@ eq(G.binds["SHIFT-BUTTON3"], "FOCUSTARGET", "and off puts the plain bind back") 
 -- each bar is one device, in the order the keys sit
 local function row(first, n) local t = {} for i = 0, (n or 12) - 1 do t[#t + 1] = at(first + i) end return table.concat(t, " | ") end
 -- the mouse bars fill from the bottom row up, so the bar is stored bottom row first and DRAWN with 1 2 3 on top
-eq(row(25), "Flamestrike | Frostbolt R1 | - | Frost Ward | Fire Ward | Teleport: Orgrimmar | Counterspell! | Blizzard | Arcane Missiles | Poly Focus | Cone of Cold! | Arcane Explosion", "the mouse bar is stored bottom row first")
+eq(row(25), "Flamestrike | Frostbolt R1 | - | Frost Ward | Fire Ward | Teleport: Thunder Bluff | Counterspell! | Blizzard | Arcane Missiles | Poly Focus | Cone of Cold! | Arcane Explosion", "the mouse bar is stored bottom row first")
 local drawn = {}
 for r = 3, 0, -1 do drawn[#drawn + 1] = row(25 + r * 3, 3) end
-eq(table.concat(drawn, " / "), "Poly Focus | Cone of Cold! | Arcane Explosion / Counterspell! | Blizzard | Arcane Missiles / Frost Ward | Fire Ward | Teleport: Orgrimmar / Flamestrike | Frostbolt R1 | -", "on screen the block reads like the mouse: 1 2 3 on the top row")
+eq(table.concat(drawn, " / "), "Poly Focus | Cone of Cold! | Arcane Explosion / Counterspell! | Blizzard | Arcane Missiles / Frost Ward | Fire Ward | Teleport: Thunder Bluff / Flamestrike | Frostbolt R1 | -", "on screen the block reads like the mouse: 1 2 3 on the top row")
 eq(row(1, 7), "Frost Nova | Frostbolt | Ice Lance! | Blink! | Fire Blast! | Ice Block! | Shoot", "the main bar reads Q E R F Z X C")
-eq(row(9, 4), "Health Pot | Conjured Rye | Conjured Purified Water | Bandage Self", "then the thumb pad")
+eq(row(9, 4), "Health Pot | Conjured Pumpernickel | Conjured Spring Water | Bandage Self", "then the thumb pad")
 -- macros say what they should
 for name, needle in pairs({ ["Ice Lance!"] = "/stopcasting\n/cast Ice Lance", ["Cone of Cold!"] = "/stopcasting\n/cast Cone of Cold", ["Fire Blast!"] = "/stopcasting\n/cast Fire Blast",
                             ["Counterspell!"] = "/stopcasting\n/cast Counterspell", ["Bandage Self"] = "/use [@player] item:3531", ["Health Pot"] = "/use item:929",
                             ["Frostbolt R1"] = "/cast Frostbolt(Rank 1)", ["Fireball R1"] = "/cast Fireball(Rank 1)", ["Decurse"] = "@mouseover,help", ["Mana Gem"] = "/use item:5514" }) do
   check(G.macros[name] and G.macros[name]:find(needle, 1, true), "macro " .. name .. " does its job")
 end
--- every castable spell he knows is on a bar somewhere
+-- every castable spell he knows is on a bar somewhere. The layout's own ignore list is the
+-- one exception: those are spells a later spell fully replaces (Frost Armor under Ice Armor,
+-- the lesser conjured gems), and the addon promises them no button on purpose.
+local ignored = (ns.classLayout() and ns.classLayout().ignore) or {}
 local missing = {}
 for _, sp in ipairs(saved.spells) do
-  if not sp.passive and sp.name ~= "Attack" and sp.type == 1 then
+  if not sp.passive and not ignored[sp.name] and sp.type == 1 then
     local found = whereIs(sp.name)
     for name, body in pairs(G.macros) do if not found and body:find(sp.name, 1, true) and whereIs(name) then found = true end end
     if not found and not missing[sp.name] then missing[sp.name] = true missing[#missing + 1] = sp.name end
@@ -154,7 +183,7 @@ for _, key in ipairs({ "ALT-3", "SHIFT-0", "ALT-LEFT", "ALT-DOWN", "ALT-RIGHT" }
 end
 -- and everything with no fixed home still lands somewhere you can reach
 for _, name in ipairs({ "Scroll of Polymorph: Odd Melon", "Scroll of Confuse Beast", "Scroll of Imbue Frost", "Scroll of Protection II",
-                        "Fishing", "Bristle Whisker Catfish", "Longjaw Mud Snapper", "Teleport: Orgrimmar" }) do
+                        "Teleport: Thunder Bluff", "Teleport: Undercity" }) do
   local slot = whereIs(name)
   check(onClickBars(slot) or (slot and slot >= 157 and slot <= 168), name .. " has a home (slot " .. tostring(slot) .. ")")
 end
@@ -165,50 +194,44 @@ eq(TorchBindsDB.clickCast, "ok", "click casting set up")
 say("after setup:\n  main    " .. row(1) .. "\n  shift   " .. row(61) .. "\n  mouse   " .. row(25) .. "\n  m+shift " .. row(37) .. "\n  click   " .. row(49) .. "\n")
 say("  said: " .. table.concat(G.printed, "\n        ") .. "\n")
 
--- 1b. the look: mouse bars drawn like the mouse -------------------------------------------------------
-eq(TorchBindsDB.look, "devices", "the devices look is applied on the first run")
-eq(TorchBindsDB.lookBefore, "Classic", "the layout you had is remembered")
-eq(#G.edit.layouts, 1, "one new Edit Mode layout")
-eq(G.edit.layouts[1].layoutName, "Torch Devices", "named Torch Devices")
-eq(G.edit.activeLayout, 3, "and it is the active one")
-local function barOf(layout, index) for _, sys in ipairs(layout.systems) do if sys.system == 0 and sys.systemIndex == index then return sys end end end
-local function setting(sys, id) for _, e in ipairs(sys.settings) do if e.setting == id then return e.value end end end
-for _, index in ipairs({ 4, 5 }) do
-  local sys = barOf(G.edit.layouts[1], index)
-  eq(setting(sys, 0), 0, "bar " .. index .. " is horizontal") eq(setting(sys, 1), 4, "bar " .. index .. " has four rows") eq(setting(sys, 2), 12, "bar " .. index .. " has twelve buttons")
-  eq(sys.isInDefaultPosition, false, "bar " .. index .. " has its own position") eq(sys.anchorInfo.relativeTo, "MultiBarBottomLeft", "bar " .. index .. " hangs off the Shift bar")
-  eq(sys.anchorInfo.relativePoint, "TOPRIGHT", "bar " .. index .. " sits above the end of the Shift bar, the middle of the screen")
+-- 1b. the look: NOTHING is written to Edit Mode — the 11-04 launch build wiped the
+--     account's layouts on SaveLayouts, so the bars are pinned straight onto the frames
+eq(#G.edit.layouts, 0, "and no Edit Mode layout is ever written")
+local function pinOf(name) return _G[name].point end
+if saved.look == "off" then
+  -- the character turned the look off; an upgrade must not drag his bars around
+  eq(TorchBindsDB.look, "off", "a look you turned off is honored through the upgrade")
+  eq(pinOf("MultiBar5"), nil, "so no row is pinned until you ask")
+else
+  eq(TorchBindsDB.look, "devices", "the devices look is applied on the first run")
 end
-eq(barOf(G.edit.layouts[1], 4).anchorInfo.point, "BOTTOMRIGHT", "plain block is to the left of centre")
-eq(barOf(G.edit.layouts[1], 5).anchorInfo.point, "BOTTOMLEFT", "Shift block is to the right of centre")
-eq(barOf(G.edit.layouts[1], 1).isInDefaultPosition, true, "the main bar is not moved")
-eq(#G.edit.layouts[1].systems, 9, "everything else on screen is carried over")
-SlashCmdList["TORCHBINDS"]("look corner")
-eq(G.edit.layouts[2] and G.edit.layouts[2].layoutName, "Torch Corner", "corner look makes its own layout")
-eq(G.edit.activeLayout, 4, "corner is active")
-eq(barOf(G.edit.layouts[2], 4).anchorInfo.relativeTo, "UIParent", "corner: anchored to the screen corner")
-eq(setting(barOf(G.edit.layouts[2], 4), 1), 4, "corner: still a four-row block")
 SlashCmdList["TORCHBINDS"]("look devices")
-eq(#G.edit.layouts, 2, "switching back reuses the layout, no third copy")
-eq(G.edit.activeLayout, 3, "devices active again")
+eq(TorchBindsDB.look, "devices", "look devices applies on request")
+eq(pinOf("MultiBar5") and pinOf("MultiBar5").to, "MultiBarRight", "the Alt pad row is pinned above the mouse block")
+eq(pinOf("MultiBar5").point, "BOTTOMLEFT", "by its bottom left corner")
+eq(pinOf("MultiBar6") and pinOf("MultiBar6").to, "MultiBar5", "the Alt thumb row stacks on the pad row")
+eq(pinOf("MultiBar7") and pinOf("MultiBar7").to, "MultiBar6", "action bar 8 rides on top while it is switched on")
+MultiBar7.shown = false MultiBar7.point = nil
+SlashCmdList["TORCHBINDS"]("look devices")
+eq(pinOf("MultiBar7"), nil, "a hidden action bar 8 is left alone")
+MultiBar7.shown = true
+SlashCmdList["TORCHBINDS"]("look corner")
+eq(TorchBindsDB.look, "corner", "corner look selected")
+eq(#G.edit.layouts, 0, "corner writes nothing to Edit Mode either")
 SlashCmdList["TORCHBINDS"]("look off")
-eq(G.edit.activeLayout, 2, "look off returns to the layout you had (Classic)")
 eq(TorchBindsDB.look, "off", "and remembers you turned it off")
-fire("PLAYER_ENTERING_WORLD", true, false)
-eq(G.edit.activeLayout, 2, "a look you turned off is not re-applied at login")
 G.combat = true
 SlashCmdList["TORCHBINDS"]("look devices")
-eq(G.edit.activeLayout, 2, "no look change in combat")
+eq(TorchBindsDB.look, "off", "no look change in combat")
 G.combat = false
 SlashCmdList["TORCHBINDS"]("look devices") SlashCmdList["TORCHBINDS"]("look") SlashCmdList["TORCHBINDS"]("look nonsense")
-eq(G.edit.activeLayout, 3, "devices on again")
+eq(TorchBindsDB.look, "devices", "devices on again")
 
--- a look applied by an older version gets the new positions on the next layout version
-barOf(G.edit.layouts[1], 4).anchorInfo = { point = "BOTTOMRIGHT", relativeTo = "UIParent", relativePoint = "BOTTOMRIGHT", offsetX = -172, offsetY = 10 }
+-- a look applied by an older version is restamped at login, still without Edit Mode
 TorchBindsDB.lookVersion, TorchBindsDB.layoutVersion = 1, 9
 fire("PLAYER_ENTERING_WORLD", true, false)
-eq(barOf(G.edit.layouts[1], 4).anchorInfo.relativeTo, "MultiBarBottomLeft", "an older look is moved to the new place by itself")
-eq(G.edit.activeLayout, 3, "and stays active")
+check(TorchBindsDB.lookVersion > 1, "an older look is restamped by itself")
+eq(#G.edit.layouts, 0, "and still nothing is written to Edit Mode")
 
 -- 2. second login: nothing moves, and a key you changed stays changed --------------------------
 local calls = G.placeCalls
@@ -291,7 +314,7 @@ eq(rank(slotOf("E")), 8408, "caught up after combat")
 SlashCmdList["TORCHBINDS"]("preset keyboard") runTimers()
 eq(TorchBindsDB.preset, "keyboard", "preset saved")
 eq(cast("CTRL-Q"), "Arcane Missiles", "keyboard preset: Ctrl+Q is what thumb 6 is")
-eq(cast("CTRL-1"), "Rapid Regeneration", "keyboard preset: Ctrl+1 is what Shift + thumb 6 is")
+eq(cast("CTRL-1"), "Feed", "keyboard preset: Ctrl+1 is what Shift + thumb 6 is")
 eq(cast("E"), "Frostbolt", "the main keys are the same in every preset")
 SlashCmdList["TORCHBINDS"]("preset xaryu") runTimers()
 for key, spell in pairs({ ["3"] = "Frostbolt", TAB = "Frost Nova", ["1"] = "Cone of Cold!", ["5"] = "Fireball R1", BUTTON5 = "Fire Blast!", BUTTON4 = "Ice Block!",
@@ -732,7 +755,9 @@ G.slots[eSlot] = nil
 fire("SPELLS_CHANGED")
 eq(cast("E"), "Frostbolt", "and the key fills again once it is empty")
 local mine = {}
-for i, slot in ipairs({ 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 68, 69, 70, 71, 72, 8, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156 }) do
+-- slots 145+ cannot hold a player's own items any more: the Alt layer is secure buttons, not
+-- action slots, so the hoard lives entirely on slots the client really has
+for i, slot in ipairs({ 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 68, 69, 70, 71, 72, 8 }) do
   ITEM[800000 + i] = { "My Trinket " .. i, 1 }
   G.bags[800000 + i] = 1
   G.slots[slot] = { kind = "item", id = 800000 + i }
@@ -760,15 +785,14 @@ G.bags[900001] = 0
 check(pcall(SlashCmdList["TORCHBINDS"], "map"), "/torch map works in combat")
 eq(G.macros["Health Pot"], bodyBefore, "and changes no macro there")
 G.combat = false
--- five Edit Mode layouts already: the look says so instead of failing silently
+-- a full Edit Mode layout list is never touched: the look does not write layouts at all
 SlashCmdList["TORCHBINDS"]("look off")
 G.edit.layouts = {}
-for i = 1, 5 do G.edit.layouts[i] = { layoutName = "Mine " .. i, layoutType = 1, systems = G.edit.layouts[1] and G.edit.layouts[1].systems or EditModePresetLayoutManager.GetCopyOfPresetLayouts()[1].systems } end
+for i = 1, 5 do G.edit.layouts[i] = { layoutName = "Mine " .. i, layoutType = 1, systems = EditModePresetLayoutManager.GetCopyOfPresetLayouts()[1].systems } end
 G.edit.activeLayout = 3
-G.printed = {}
 SlashCmdList["TORCHBINDS"]("look devices")
-check(table.concat(G.printed, " "):find("already have 5", 1, true), "with five layouts already it explains why it cannot add one")
-eq(#G.edit.layouts, 5, "and leaves your layouts alone")
+eq(#G.edit.layouts, 5, "five existing layouts are left exactly alone")
+eq(G.edit.activeLayout, 3, "and the active one is not switched")
 G.edit.layouts, G.edit.activeLayout = {}, 2
 
 -- 9. a fresh level 1 mage ---------------------------------------------------------------------------------
@@ -793,7 +817,7 @@ TorchBindsDB = {}
 G.class = "WARRIOR"
 ns = load()
 fire("PLAYER_ENTERING_WORLD", true, false)
-eq(TorchBindsDB.layoutVersion, 11, "no layout: marked done")
+eq(TorchBindsDB.layoutVersion, 12, "no layout: marked done")
 eq(#(TorchBindsDB.log or {}), 0, "no layout: nothing logged: " .. table.concat(TorchBindsDB.log or {}, " | "))
 
 -- 11. the game answers "empty" for every slot at once: no key is taken away -------------------------------
@@ -827,6 +851,28 @@ eq(G.binds["E"], nil, "repair: nothing is touched in combat")
 G.combat = false fire("PLAYER_REGEN_ENABLED")
 eq(G.binds["E"], shiftE, "repair: it happens when the fight ends")
 eq(#(TorchBindsDB.log or {}), 0, "repair: nothing went wrong: " .. table.concat(TorchBindsDB.log or {}, " | "))
+
+-- Max rank always wins (the Frost Armor rank 1 bug). On Forever the client did not report
+-- IsSpellBookItemLowRank, so the old resolver kept whatever the slot order handed it and a
+-- rank 1 armor landed on the key. The rank number in the subtext is the arbiter now.
+do
+  local realLow, realSub = C_SpellBook.IsSpellBookItemLowRank, C_Spell.GetSpellSubtext
+  C_SpellBook.IsSpellBookItemLowRank = function() return false end   -- the Forever client, which stays silent
+  local function frostArmorId() return (ns.spellIndex()["Frost Armor"] or {}).id end
+  G.book = { [1] = { name = "Frost Armor", spellID = 168,  itemType = 1, subName = "Rank 1" },
+             [2] = { name = "Frost Armor", spellID = 7300, itemType = 1, subName = "Rank 2" },
+             [3] = { name = "Frost Armor", spellID = 7301, itemType = 1, subName = "Rank 3" } }
+  eq(frostArmorId(), 7301, "max rank Frost Armor wins when the client hides low rank")
+  G.book = { [1] = { name = "Frost Armor", spellID = 7301, itemType = 1, subName = "Rank 3" },
+             [2] = { name = "Frost Armor", spellID = 7300, itemType = 1, subName = "Rank 2" },
+             [3] = { name = "Frost Armor", spellID = 168,  itemType = 1, subName = "Rank 1" } }
+  eq(frostArmorId(), 7301, "max rank wins even when ranks are listed highest first")
+  C_Spell.GetSpellSubtext = function(id) return ({ [168] = "Rank 1", [7300] = "Rank 2", [7301] = "Rank 3" })[id] or "" end
+  G.book = { [1] = { name = "Frost Armor", spellID = 7301, itemType = 1 },
+             [2] = { name = "Frost Armor", spellID = 168,  itemType = 1 } }
+  eq(frostArmorId(), 7301, "max rank wins from the spell subtext when the book entry omits it")
+  C_Spell.GetSpellSubtext, C_SpellBook.IsSpellBookItemLowRank, G.book = realSub, realLow, {}
+end
 
 say(("%d passed, %d failed\n"):format(passed, failed))
 os.exit(failed == 0 and 0 or 1)

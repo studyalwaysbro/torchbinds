@@ -1,5 +1,24 @@
 # Torch Binds changelog
 
+## 8.2 — 2026-11-08 (installed, not yet released)
+- The Alt layers (ALT and MALT) no longer live on Action Bars 6 and 7. The live Forever client
+  silently refuses every placement into slots 145+, so since launch nothing had ever landed
+  there: no Mage Armor, no racials, no buffs, and Alt keys that pressed empty squares. Each Alt
+  key now presses a hidden secure button that casts its entry directly (spell, macro or item
+  attribute); no action slot is involved, so the client's bar support no longer matters.
+- `place()` verifies the slot after `PlaceAction` and writes a `place failed <label> @ <slot>`
+  note when the client refused it. PlaceAction cannot say no; the empty slot afterwards is the
+  only evidence, and before this the failure was invisible.
+- LAYOUT_VERSION 12: one forced re-setup at next login, which also restores the
+  potion/food/water/bandage row that had drifted (water was squatting the bandage key).
+- Ranks are chosen by their real rank number now, not the client's low-rank flag, which the
+  Forever client does not report reliably: that is what kept dropping a rank 1 Frost Armor on
+  the key no matter how often you replaced it. A spell always binds at its highest known rank.
+- When upkeep swaps a key to a different spell that supersedes what you dragged there, it now
+  says so in chat: "Updated on your bars: Armor (replaces Frost Armor, which it outgrows)".
+  Ice Armor wears the same icon as Frost Armor, so the silent swap read like a rank-1 bug.
+- Tests: run 378, v11 180, fuzz 3 seeds clean; the harness learned to read the button layer.
+
 ## 8.1 — 2026-10-28
 
 `Panel.lua`: the four numbers you otherwise keep opening bags and the character sheet to find,

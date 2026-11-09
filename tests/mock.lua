@@ -125,7 +125,17 @@ local function fontString()
   return fs
 end
 UIParent = { CreateFontString = fontString }
-MultiBarRight, MultiBarLeft = {}, {}
+local function barFrame(name)
+  local f = { name = name, shown = true }
+  f.IsShown = function(self) return self.shown end
+  f.ClearAllPoints = function(self) self.point = nil end
+  f.SetPoint = function(self, point, to, toPoint, x, y)
+    self.point = { point = point, to = type(to) == "table" and to.name or tostring(to), toPoint = toPoint, x = x, y = y }
+  end
+  return f
+end
+MultiBarRight, MultiBarLeft = barFrame("MultiBarRight"), barFrame("MultiBarLeft")
+MultiBar5, MultiBar6, MultiBar7 = barFrame("MultiBar5"), barFrame("MultiBar6"), barFrame("MultiBar7")
 C_Timer = { After = function(delay, fn) G.timers[#G.timers + 1] = fn end,
             NewTicker = function(every, fn) G.tickers[#G.tickers + 1] = fn end }
 -- other units: G.units.target = { hostile = true, player = true, class = "Priest", guid = "p1", target = "player", cast = "Heal", auras = { Polymorph = 130 } }
@@ -185,7 +195,11 @@ C_Spell.IsSpellInRange = function(_, unit) local u = resolve(unit) if not u then
 C_AddOns = {}
 local frames = {}
 function CreateFrame(_, name)
-  local f = { events = {}, strings = {}, shown = true, scripts = {} }
+  local f = { events = {}, strings = {}, shown = true, scripts = {}, attrs = {} }
+  f.SetAttribute = function(self, k, v) self.attrs[k] = v end
+  f.GetAttribute = function(self, k) return self.attrs[k] end
+  f.SetAlpha, f.EnableMouse, f.RegisterForClicks = function() end, function() end, function() end
+  f.GetName = function() return name end
   f.RegisterEvent = function(_, e) f.events[e] = true end
   f.UnregisterEvent = function(_, e) f.events[e] = nil end
   f.SetScript = function(self, which, fn)
@@ -228,8 +242,25 @@ for prefix, first in pairs(FIRST) do for i = 1, 12 do _G[prefix .. i].action = f
 SlashCmdList = {}
 local function runTimers() local guard = 0 while #G.timers > 0 and guard < 300 do guard = guard + 1 table.remove(G.timers, 1)() end end
 local function fire(event, ...) for _, f in ipairs(frames) do if f.events[event] and f.handler then f.handler(f, event, ...) end end runTimers() end
-local function at(slot) local a = G.slots[slot] if not a then return "-" end return a.kind == "macro" and a.text or (a.kind == "spell" and (spellName[a.id] or ("spell:" .. a.id)) or (ITEM[a.id] and ITEM[a.id][1] or ("item:" .. a.id))) end
-local function rank(slot) return G.slots[slot] and G.slots[slot].id end
+local function altFrame(slot)
+  if slot >= 145 and slot <= 156 then return G.named["TorchBindsAlt" .. (slot - 144)] end
+  if slot >= 157 and slot <= 168 then return G.named["TorchBindsMAlt" .. (slot - 156)] end
+end
+local function at(slot)
+  local b = altFrame(slot)
+  if b then
+    local a = b.attrs or {}
+    if not a.tb_kind then return "-" end
+    return a.tb_kind == "macro" and a.tb_text
+      or (a.tb_kind == "spell" and (spellName[a.tb_id] or a.tb_text or ("spell:" .. tostring(a.tb_id)))
+      or (ITEM[a.tb_id] and ITEM[a.tb_id][1] or a.tb_text or ("item:" .. tostring(a.tb_id))))
+  end
+  local a = G.slots[slot] if not a then return "-" end return a.kind == "macro" and a.text or (a.kind == "spell" and (spellName[a.id] or ("spell:" .. a.id)) or (ITEM[a.id] and ITEM[a.id][1] or ("item:" .. a.id))) end
+local function rank(slot)
+  local b = altFrame(slot)
+  if b then return b.attrs and b.attrs.tb_id end
+  return G.slots[slot] and G.slots[slot].id
+end
 local KEYS = { "1", "2", "3", "4", "5", "Q", "E", "R", "F", "Z", "X", "C" }
 local function row(first) local t = {} for i = 0, 11 do t[#t + 1] = KEYS[i + 1] .. "=" .. at(first + i) end return table.concat(t, " | ") end
 local function whereIs(name) for slot = 1, 180 do if at(slot) == name then return slot end end end

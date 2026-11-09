@@ -50,14 +50,27 @@ local function learn(name, upTo)
   end
 end
 
+-- reads a slot the way the addon now sees it: real action slots from G.slots, the Alt layers
+-- from their secure buttons' attributes
+local function infoAt(slot)
+  if slot >= 145 and slot <= 168 then
+    local stem = slot <= 156 and ("TorchBindsAlt" .. (slot - 144)) or ("TorchBindsMAlt" .. (slot - 156))
+    local b = G.named[stem]
+    local a = b and b.attrs or {}
+    if not a.tb_kind then return nil end
+    return { kind = a.tb_kind, id = a.tb_id, text = a.tb_text }
+  end
+  return G.slots[slot]
+end
+
 local function key(slot)
-  local a = G.slots[slot]
+  local a = infoAt(slot)
   if not a then return nil end
   return a.kind .. ":" .. tostring(a.kind == "macro" and a.text or a.id)
 end
 
 local function isMine(slot)
-  local a = G.slots[slot]
+  local a = infoAt(slot)
   if not a then return false end
   if a.kind == "item" then return a.id > 700000 and a.id < 800000 end
   if a.kind == "macro" then return userMacros[a.text] ~= nil end
@@ -240,6 +253,15 @@ local function everySpellHasAHome()
     local a = G.slots[slot]
     if a and a.kind == "spell" then onBar[spellName[a.id] or "?"] = true end
     if a and a.kind == "macro" and G.macros[a.text] then inMacro[#inMacro + 1] = G.macros[a.text] end
+  end
+  -- the Alt layers live on secure buttons, not action slots
+  for _, stem in ipairs({ "TorchBindsAlt", "TorchBindsMAlt" }) do
+    for p = 1, 12 do
+      local b = G.named[stem .. p]
+      local a = b and b.attrs or {}
+      if a.tb_kind == "spell" then onBar[spellName[a.tb_id] or a.tb_text or "?"] = true end
+      if a.tb_kind == "macro" and G.macros[a.tb_text] then inMacro[#inMacro + 1] = G.macros[a.tb_text] end
+    end
   end
   for _, entry in pairs(G.book) do
     local name = entry.name

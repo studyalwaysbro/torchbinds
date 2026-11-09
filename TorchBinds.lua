@@ -21,7 +21,7 @@
 
 local ADDON, ns = ...
 
-local LAYOUT_VERSION = 11
+local LAYOUT_VERSION = 12
 -- Seven bars, one per thing your hands do. Each is one row of twelve action slots.
 -- Two hands, two modifiers: Shift under the thumb, Alt on the pad key above it. That is
 -- three layers for the left hand and three for the mouse, and nothing on the pinky.
@@ -42,6 +42,28 @@ local DPAD = { "UP", "DOWN", "LEFT", "RIGHT" }                                  
 local GRID = { "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "=" }     -- what thumb buttons 1 to 12 send
 -- A bar drawn as four rows of three fills from the bottom row up. The mouse has 1 2 3 on its top
 -- row, so thumb button n lives in the bar position that lands where that button is on the mouse.
+-- The Alt layers never touch an action bar slot: this client refuses placements into Action
+-- Bars 6 and 7 (every 145+ slot stayed empty since launch while 1-72 fill fine) and PlaceAction
+-- cannot say no. Each Alt key presses a hidden secure button that casts its entry directly.
+local ALT_BUTTON, ALT_NAME = {}, {}
+do
+  local pressDown = C_CVar and C_CVar.GetCVarBool and C_CVar.GetCVarBool("ActionButtonUseKeyDown")
+  for _, first in ipairs({ ALT, MALT }) do
+    for p = 1, 12 do
+      local slot = first + p - 1
+      local name = (first == ALT and "TorchBindsAlt" or "TorchBindsMAlt") .. p
+      local b = CreateFrame("Button", name, UIParent, "SecureActionButtonTemplate")
+      b:SetSize(1, 1)
+      b:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", 0, 0)
+      b:SetAlpha(0)
+      b:EnableMouse(false) -- a key binding still clicks it; the mouse never can
+      b:RegisterForClicks(pressDown and "AnyDown" or "AnyUp")
+      b:Show()
+      ALT_BUTTON[slot], ALT_NAME[slot] = b, name
+    end
+  end
+end
+
 local GRID_POS = {}   -- thumb button -> position on the bar (1 to 12)
 local GRID_THUMB = {} -- position on the bar -> thumb button
 for n = 1, 12 do
@@ -90,11 +112,12 @@ end
 -- Nobody running this layout has 72 empty slots, so that answer means "not readable right now".
 local function barsReadable()
   for slot = 1, 72 do if slotRead(slot) then return true end end
-  for slot = 145, 168 do if slotRead(slot) then return true end end
   return false
 end
 
 local function slotFilled(slot)
+  local b = ALT_BUTTON[slot]
+  if b then return b:GetAttribute("tb_kind") ~= nil end
   return slotRead(slot) or not barsReadable()
 end
 
@@ -113,7 +136,12 @@ end
 -- Every preset shares the slots, so the bars look the same whichever one you use.
 -- On the two mouse bars `i` is the thumb button number; everywhere else it is the position on the bar.
 local function pos(first, i) return (first == MOUSE or first == MSHIFT or first == MALT) and GRID_POS[i] or i end
-local function to(first, i) return BAR_COMMAND[first] .. pos(first, i) end                              -- always bound
+local function to(first, i)                                                                             -- always bound
+  local p = pos(first, i)
+  local n = ALT_NAME[first + p - 1]
+  if n then return "CLICK " .. n .. ":LeftButton" end
+  return BAR_COMMAND[first] .. p
+end
 local function ifFilled(first, i) return slotFilled(first + pos(first, i) - 1) and to(first, i) or false end -- bound only when something is there
 
 -- Set focus without letting go of your target: whoever the mouse is over becomes the focus. With
@@ -772,10 +800,23 @@ local function spellIndex()
     local name, kind = plain(entry.name), plain(entry.itemType)
     if not name then return false end
     if entry.isPassive or entry.isOffSpec or (kind and kind ~= spellType) then return true end -- not castable yet
+    local id = plain(entry.spellID) or plain(entry.actionID)
     local low = try(SB.IsSpellBookItemLowRank, slot, bank()) and true or false
+    -- The rank NUMBER is the real arbiter of which entry is highest. Forever does not
+    -- reliably report IsSpellBookItemLowRank or list ranks lowest-first, which is what put a
+    -- rank 1 Frost Armor on the key. So read "Rank N" from the book entry (falling back to the
+    -- spell itself) and let the largest rank win; a buff is always kept at its highest rank.
+    local sub = plain(entry.subName)
+    if (not sub or sub == "") and id and C_Spell and C_Spell.GetSpellSubtext then sub = plain(try(C_Spell.GetSpellSubtext, id)) end
+    local rank = tonumber((sub or ""):match("%d+")) or 0
     local have = best[name]
-    if not have or not low or have.low then -- ranks are listed lowest first; never let a low rank replace the top one
-      best[name] = { slot = slot, id = plain(entry.spellID) or plain(entry.actionID), base = plain(entry.actionID) or plain(entry.spellID), low = low }
+    local better
+    if not have then better = true
+    elseif rank ~= have.rank then better = rank > have.rank       -- a real rank number settles it
+    elseif have.low ~= low then better = have.low and not low      -- else a known top rank beats a known low one
+    else better = slot > have.slot end                            -- else the later slot (the usual lowest-first order)
+    if better then
+      best[name] = { slot = slot, id = id, base = plain(entry.actionID) or plain(entry.spellID), low = low, rank = rank }
     end
     return true
   end
@@ -796,6 +837,7 @@ local function spellIndex()
   end
   return best
 end
+ns.spellIndex = spellIndex
 
 -- BAGS ----------------------------------------------------------------------
 local function bagCounts()
@@ -1056,6 +1098,8 @@ local function cursorFull() return plain((try(GetCursorInfo))) ~= nil end
 
 -- what a bar slot holds: kind ("spell", "item", "macro"), id, and its name
 local function slotInfo(slot)
+  local b = ALT_BUTTON[slot]
+  if b then return b:GetAttribute("tb_kind"), b:GetAttribute("tb_id"), b:GetAttribute("tb_text") end
   local kind, id = try(GetActionInfo, slot)
   kind, id = plain(kind), plain(id)
   if not kind then return nil end
@@ -1106,6 +1150,20 @@ end
 local function place(slot, desc, ctx, changes)
   if holds(slot, desc) then return false end
   if untouchable(slot) then return false end
+  local b = ALT_BUTTON[slot]
+  if b then
+    if InCombatLockdown() then return false end
+    local t = desc.kind
+    if t ~= "spell" and t ~= "macro" and t ~= "item" then return false end
+    remember(changes, slot)
+    b:SetAttribute("spell", nil) b:SetAttribute("macro", nil) b:SetAttribute("item", nil)
+    b:SetAttribute("type", t)
+    if t == "spell" then b:SetAttribute("spell", desc.name or desc.id)
+    elseif t == "macro" then b:SetAttribute("macro", desc.name)
+    else b:SetAttribute("item", desc.name or ("item:" .. tostring(desc.id))) end
+    b:SetAttribute("tb_kind", t) b:SetAttribute("tb_id", desc.id) b:SetAttribute("tb_text", desc.name or desc.label)
+    return true
+  end
   if not pickup(desc, ctx) then
     note("pickup failed", tostring(desc.label or desc.name or desc.id))
     return false
@@ -1113,10 +1171,23 @@ local function place(slot, desc, ctx, changes)
   remember(changes, slot)
   PlaceAction(slot)
   ClearCursor() -- whatever was there comes off on the cursor and is dropped; the plan re-places what should be kept
+  if plain((try(GetActionInfo, slot))) == nil then
+    -- the client refused the slot (an action bar this build does not really have, say) and
+    -- PlaceAction cannot say no, so the empty slot after the fact is the only evidence
+    note("place failed", tostring(desc.label or desc.name or desc.id) .. " @ " .. tostring(slot))
+    return false
+  end
   return true
 end
 
 local function clear(slot, changes)
+  local b = ALT_BUTTON[slot]
+  if b then
+    if InCombatLockdown() or not b:GetAttribute("tb_kind") then return end
+    remember(changes, slot)
+    for _, a in ipairs({ "type", "spell", "macro", "item", "tb_kind", "tb_id", "tb_text" }) do b:SetAttribute(a, nil) end
+    return
+  end
   if not slotFilled(slot) or untouchable(slot) then return end
   remember(changes, slot)
   ClearCursor()
@@ -1211,7 +1282,18 @@ local function arrange(force, changes)
       if not kind then
         if place(slot, desc, ctx, changes) then report.placed = report.placed + 1 table.insert(report.added, desc.label) end
       elseif not holds(slot, desc) and sameFamily(entryAt[slot], kind, id, text) then
-        if place(slot, desc, ctx, changes) then report.placed = report.placed + 1 table.insert(report.upgraded, desc.label) end
+        if place(slot, desc, ctx, changes) then
+          report.placed = report.placed + 1
+          local label = desc.label
+          -- A different spell taking the key reads like a bug unless it is said out loud:
+          -- Ice Armor over a hand-dragged Frost Armor wears the very same icon. A higher
+          -- rank of the same name stays quiet.
+          if text and desc.name and text ~= desc.name then
+            label = label .. " (replaces " .. text .. ", which it outgrows)"
+            report.renamed = true
+          end
+          table.insert(report.upgraded, label)
+        end
       end
     end
     -- click bars: newer ranks in place, then anything not on any bar goes into the first empty slot
@@ -1436,7 +1518,7 @@ local function upkeep(quiet)
   -- what upkeep adds is recorded too, so /torch undo takes it back off
   local report = arrange(false, TorchBindsDB.undo and TorchBindsDB.undo.slots or {})
   if report.placed > 0 then
-    if #report.upgraded > 0 and not quiet then say("Updated on your bars: " .. list(report.upgraded, 6)) end
+    if #report.upgraded > 0 and (not quiet or report.renamed) then say("Updated on your bars: " .. list(report.upgraded, 6)) end
     if #report.added > 0 then say("Added to your bars: " .. list(report.added, 6) .. ". /torch map shows where.") end
     applyBinds()
   end
@@ -1476,16 +1558,31 @@ local function undo()
   if type(saved) ~= "table" then say("Nothing to undo.") return end
   local restored, ctx = 0, context()
   for slot, old in pairs(saved.slots or {}) do
-    pcall(function()
-      ClearCursor()
-      PickupAction(slot)
-      ClearCursor()
-      if old and pickup({ kind = old.kind, id = old.id, name = old.text }, ctx) then
-        PlaceAction(slot)
-        restored = restored + 1
-      end
-      ClearCursor()
-    end)
+    local b = ALT_BUTTON[slot]
+    if b then
+      pcall(function()
+        for _, a in ipairs({ "type", "spell", "macro", "item", "tb_kind", "tb_id", "tb_text" }) do b:SetAttribute(a, nil) end
+        if old and old.kind then
+          b:SetAttribute("type", old.kind)
+          if old.kind == "spell" then b:SetAttribute("spell", old.text or old.id)
+          elseif old.kind == "macro" then b:SetAttribute("macro", old.text)
+          else b:SetAttribute("item", old.text or ("item:" .. tostring(old.id))) end
+          b:SetAttribute("tb_kind", old.kind) b:SetAttribute("tb_id", old.id) b:SetAttribute("tb_text", old.text)
+          restored = restored + 1
+        end
+      end)
+    else
+      pcall(function()
+        ClearCursor()
+        PickupAction(slot)
+        ClearCursor()
+        if old and pickup({ kind = old.kind, id = old.id, name = old.text }, ctx) then
+          PlaceAction(slot)
+          restored = restored + 1
+        end
+        ClearCursor()
+      end)
+    end
   end
   for k, command in pairs(TorchBindsDB.bindsBefore or {}) do pcall(SetBinding, k, command ~= "" and command or nil) end
   local set = bindingSet()
@@ -1512,12 +1609,19 @@ local function keysBySlot()
   local out = {}
   for k, command in pairs(wanted()) do
     if command then
-      for first, prefix in pairs(BAR_COMMAND) do
-        local n = command:match("^" .. prefix .. "(%d+)$")
-        if n then
-          local slot = first + tonumber(n) - 1
-          out[slot] = out[slot] or {}
-          table.insert(out[slot], k)
+      local mp, p = command:match("^CLICK TorchBinds(M?)Alt(%d+):LeftButton$")
+      if p then
+        local slot = (mp == "M" and MALT or ALT) + tonumber(p) - 1
+        out[slot] = out[slot] or {}
+        table.insert(out[slot], k)
+      else
+        for first, prefix in pairs(BAR_COMMAND) do
+          local n = command:match("^" .. prefix .. "(%d+)$")
+          if n then
+            local slot = first + tonumber(n) - 1
+            out[slot] = out[slot] or {}
+            table.insert(out[slot], k)
+          end
         end
       end
     end
