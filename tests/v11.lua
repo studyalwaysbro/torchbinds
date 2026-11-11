@@ -129,8 +129,10 @@ for key, command in pairs(G.binds) do
     if slot then
       local what = at(slot)
       if onDemand(key) then check(what ~= "-", "the key " .. key .. " is not bound to an empty square") end
-      -- Mouse 4 and 5 deliberately mirror thumb 1 and thumb 4; everything else is once only
-      local mirrors = key:find("BUTTON[45]$") ~= nil
+      -- Mouse 4 and 5 deliberately mirror thumb 1 and thumb 4. Arcane Missiles is deliberately on
+      -- two keys as well: Shift+R for the left hand mid-rotation, and mouse thumb 6, which he fires
+      -- by clicking in a fight. Everything else is once only.
+      local mirrors = key:find("BUTTON[45]$") ~= nil or what == "Arcane Missiles"
       if what ~= "-" and not mirrors then
         if where[what] then dupes[#dupes + 1] = what .. " is on both " .. where[what] .. " and " .. key end
         where[what] = key

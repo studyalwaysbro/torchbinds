@@ -1,5 +1,26 @@
 # Torch Binds changelog
 
+## 8.2.3 — 2026-11-10
+- Never arrange against a bar system that is not serving. A cold login can hand the addon a
+  client whose slots all read empty while PlaceAction is silently ignored; the 8.2.2 layout
+  upgrade ran into exactly that at the first login of the day, rearranged the bars blind and
+  dropped what each swap handed back (90 refused placements in one session, Polymorph and Feed
+  among them). The binds side already had this defense (`barsReadable`, 8.2); the placement
+  side now has it too: a character whose bars were arranged before cannot truly have 72 empty
+  slots, so unreadable bars mean wait, not act. Setup, upkeep and respec all hold until the
+  client serves, and the login upgrade retries itself until it lands.
+- A pass the client half-refuses records nothing, so the whole layout is retried from the top
+  instead of being declared done with holes in it. Manual `/torch setup` says what happened.
+- Test fixtures carry the real character again (they still had the old troll mage from 8.1,
+  which left the suite red while the checks expected the Forsaken); new cold-login section.
+- Tests: run 383 on both fixtures, v11 178, fuzz clean.
+
+## 8.2.2 — 2026-11-10
+- Shift+R casts Arcane Missiles instead of the rank 1 Fireball downrank: the cheap-filler slot
+  earns a real second nuke, and a fresh mage no longer gets a junk downrank before learning it.
+  The `Fireball R1` macro is retired; found on a bar, it is replaced.
+- LAYOUT_VERSION 14: one forced re-setup at next login.
+
 ## 8.2.1 — 2026-11-09
 - Feed (the Forsaken Cannibalize macro) moves from Shift + thumb 6 to Shift + thumb 2. Thumb 2
   is also the pad's top row, so the hand that just finished the pack reaches it without the

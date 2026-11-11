@@ -21,7 +21,7 @@
 
 local ADDON, ns = ...
 
-local LAYOUT_VERSION = 13
+local LAYOUT_VERSION = 14
 -- Seven bars, one per thing your hands do. Each is one row of twelve action slots.
 -- Two hands, two modifiers: Shift under the thumb, Alt on the pad key above it. That is
 -- three layers for the left hand and three for the mouse, and nothing on the pinky.
@@ -120,6 +120,16 @@ local function slotFilled(slot)
   if b then return b:GetAttribute("tb_kind") ~= nil end
   return slotRead(slot) or not barsReadable()
 end
+
+-- A cold login can hand us a bar system that is not serving yet: every slot reads empty and
+-- PlaceAction is silently ignored. Arranging against that shuffles the bars blind and drops
+-- whatever each swap hands back. A character that was arranged before cannot truly have empty
+-- bars, so unreadable bars there mean wait, not act; only a never-arranged character may really
+-- be empty, and on empty bars a blind pass has nothing to lose.
+local function barsServing()
+  return barsReadable() or not (TorchBindsDB and TorchBindsDB.lastSetup)
+end
+local placeRefused = 0 -- placements the client ignored during the current arrange pass
 
 ns.say, ns.note, ns.plain, ns.try = say, note, plain, try
 ns.BARS = { MAIN = MAIN, SHIFT = SHIFT, MOUSE = MOUSE, MSHIFT = MSHIFT, CLICK = CLICK, ALT = ALT, MALT = MALT }
@@ -531,8 +541,6 @@ local MACROS = {
   ["Decurse"] = "#showtooltip Remove Lesser Curse\n/cast [@mouseover,help,nodead][help,nodead][@player] Remove Lesser Curse",
   -- rank 1: a 1.5 second cast for the slow, not the damage. For kiting and for making a runner stop.
   ["Frostbolt R1"] = "#showtooltip Frostbolt(Rank 1)\n/cast Frostbolt(Rank 1)",
-  -- rank 1 Fireball: the same 1.5 second cast, for almost no mana
-  ["Fireball R1"] = "#showtooltip Fireball(Rank 1)\n/cast Fireball(Rank 1)",
   [FOCUS_MACRO] = "/focus [@mouseover,exists,nodead][]",
   -- Frost Blast is the 1.5 second frost nuke Forever added at level 24. It is the kiting cast:
   -- fast enough to land between steps, and it carries the slow. /stopcasting makes it interrupt
@@ -566,7 +574,6 @@ local GEMS = { { "Conjure Mana Ruby", 8008 }, { "Conjure Mana Citrine", 8007 }, 
 local CONJURE_GEM = first("Conjure Mana Ruby", "Conjure Mana Citrine", "Conjure Mana Jade", "Conjure Mana Agate")
 local DECURSE = { macro = "Decurse", needs = "Remove Lesser Curse" }
 local FROST_R1 = { macro = "Frostbolt R1", needs = "Frostbolt" }
-local FIRE_R1 = { macro = "Fireball R1", needs = "Fireball" }
 local FROST_BLAST = { macro = "Frost Blast!", needs = "Frost Blast" }
 local ICE_BLOCK = { macro = "Ice Block!", needs = "Ice Block" }
 local SHIELD_OFF = { macro = "Shield Off", needs = "Mana Shield" }
@@ -576,7 +583,7 @@ local FEED = { macro = "Feed", needs = "Cannibalize" }
 local CS_OVER = { macro = "CS Mouseover", needs = "Counterspell" }
 local POLY_OVER = { macro = "Poly Over", needs = "Polymorph" }
 -- macros and items older versions of this addon placed; found on a bar, they are replaced, not kept
-local RETIRED_MACROS = { ["Counterspell Ins"] = true }
+local RETIRED_MACROS = { ["Counterspell Ins"] = true, ["Fireball R1"] = true }
 local RETIRED_ITEMS = { [5514] = true, [5513] = true, [8007] = true, [8008] = true } -- loose mana gems
 
 -- Items, worst to best. The best one in your bags that you are high enough to use wins. `pattern`
@@ -718,7 +725,7 @@ local SPEC_ROWS = {
 -- whatever your tree uses for that job. Nothing moves when you respec.
 --
 --   left hand, plain      Q freeze   E nuke   R follow-up   F escape   Z instant   X panic   C wand
---   left hand, Shift      E second nuke   R cheap downrank   Z mana back   X burst   C gem
+--   left hand, Shift      E second nuke   R Arcane Missiles   Z mana back   X burst   C gem
 --   left hand, Alt        Q racial   E off-school nuke   R instant-cast   Z cone   X absorb   C decurse
 --   thumb pad             potion, food, water, bandage; with Alt, mana potion, the conjures, hearth
 --   mouse thumb, plain    control, area damage and the sustain you press mid-fight
@@ -741,7 +748,7 @@ local LAYOUT = {
         -- the same seven keys with Shift, the pad's thumb key.
         -- Shift+Q and Shift+F stay empty on purpose: a cooldown pressed with Shift still held sent
         -- the next E out as the wrong spell, and Blink must never be eaten by a modifier.
-        [SHIFT] = { false, by.second, FIRE_R1, false, "Evocation", by.burst, GEM, false,
+        [SHIFT] = { false, by.second, "Arcane Missiles", false, "Evocation", by.burst, GEM, false,
                     false, false, false, false },
         -- the same seven keys with Alt, the pad key directly above Shift. Alt is the layer for
         -- things that save your life once a fight and for the housekeeping between fights.
@@ -1178,6 +1185,7 @@ local function place(slot, desc, ctx, changes)
   if plain((try(GetActionInfo, slot))) == nil then
     -- the client refused the slot (an action bar this build does not really have, say) and
     -- PlaceAction cannot say no, so the empty slot after the fact is the only evidence
+    placeRefused = placeRefused + 1
     note("place failed", tostring(desc.label or desc.name or desc.id) .. " @ " .. tostring(slot))
     return false
   end
@@ -1487,12 +1495,24 @@ end
 local function setup(auto)
   if InCombatLockdown() then say("You are in combat. Try again after the fight.") return false end
   if not classLayout() then say("No bar layout for this class yet. Your keys are bound; the bars are yours to fill.") return false end
+  if not barsServing() then
+    if not auto then say("The game is not serving the action bars yet. Try again in a moment.") end
+    return false
+  end
+  placeRefused = 0
   local changes = {}
   local report = arrange(true, changes)
   if not TorchBindsDB.undo then -- keep the oldest record: undo goes back to before Torch Binds touched anything
     TorchBindsDB.undo = { at = date("%Y-%m-%d %H:%M:%S"), slots = changes }
   else
     for slot, old in pairs(changes) do if TorchBindsDB.undo.slots[slot] == nil then TorchBindsDB.undo.slots[slot] = old end end
+  end
+  if placeRefused > 0 then
+    -- the client took some placements and ignored others: half ready. Record nothing, so the
+    -- whole layout is tried again from the top once the client serves.
+    note("layout deferred", placeRefused .. " placements refused by the client")
+    if not auto then say("The game refused " .. placeRefused .. " placements. The layout will finish when the client is ready.") end
+    return false
   end
   TorchBindsDB.lastSetup = { placed = report.placed, missing = report.missing, moved = report.moved, overflow = report.overflow, auto = auto or nil, at = date("%Y-%m-%d %H:%M:%S") }
   TorchBindsDB.layoutVersion = LAYOUT_VERSION
@@ -1518,7 +1538,7 @@ local TALENT_EVENT = { PLAYER_TALENT_UPDATE = true, CHARACTER_POINTS_CHANGED = t
 local specPending = false
 
 local function upkeep(quiet)
-  if InCombatLockdown() or TorchBindsDB.off or TorchBindsDB.layoutVersion ~= LAYOUT_VERSION then return false end
+  if InCombatLockdown() or TorchBindsDB.off or TorchBindsDB.layoutVersion ~= LAYOUT_VERSION or not barsServing() then return false end
   -- what upkeep adds is recorded too, so /torch undo takes it back off
   local report = arrange(false, TorchBindsDB.undo and TorchBindsDB.undo.slots or {})
   if report.placed > 0 then
@@ -1532,7 +1552,7 @@ end
 
 -- Your tree changed. Replace only the squares the tree owns, say what moved, and keep the keys.
 local function respec(quiet)
-  if InCombatLockdown() or TorchBindsDB.off or TorchBindsDB.layoutVersion ~= LAYOUT_VERSION then return false end
+  if InCombatLockdown() or TorchBindsDB.off or TorchBindsDB.layoutVersion ~= LAYOUT_VERSION or not barsServing() then return false end
   local layout = classLayout()
   if not (layout and layout.owned) then return false end
   local ctx, changes = context(), (TorchBindsDB.undo and TorchBindsDB.undo.slots or {})
@@ -1697,8 +1717,17 @@ local function tryLayout()
     C_Timer.After(2, tryLayout)
     return
   end
+  if not barsServing() then -- arranged bars reading all empty: a cold login's dead bar system
+    C_Timer.After(2, tryLayout)
+    return
+  end
   local ok, err = pcall(setup, true)
   if not ok then note("setup failed", err) end
+  if ok and TorchBindsDB.layoutVersion ~= LAYOUT_VERSION then
+    -- setup saw the client refuse placements and recorded nothing: run it again from the top
+    C_Timer.After(5, tryLayout)
+    return
+  end
   -- the first time, also draw the bars to match: mouse blocks shaped like the mouse
   if ok and ns.Look and TorchBindsDB.look == nil and TorchBindsDB.layoutVersion == LAYOUT_VERSION then
     local result = ns.Look.Apply("devices")

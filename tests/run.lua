@@ -83,8 +83,8 @@ local ns = load()
 
 -- 1. first login on the new version: the whole layout is applied by itself --------------
 fire("PLAYER_ENTERING_WORLD", true, false)
-eq(TorchBindsDB.layoutVersion, 13, "layout version recorded")
-eq(TorchBindsDB.appliedVersion, 13, "binds version recorded")
+eq(TorchBindsDB.layoutVersion, 14, "layout version recorded")
+eq(TorchBindsDB.appliedVersion, 14, "binds version recorded")
 eq(#(TorchBindsDB.log or {}), 0, "nothing went wrong: " .. table.concat(TorchBindsDB.log or {}, " | "))
 if arg[2] == "dump" then
   local keys = {}
@@ -99,8 +99,8 @@ end
 local KEYMAP = {
   -- left hand
   Q = "Frost Nova", E = "Frostbolt", R = "Ice Lance!", F = "Blink!", Z = "Fire Blast!", X = "Ice Block!", C = "Shoot",
-  ["SHIFT-E"] = "Scorch", ["SHIFT-R"] = "Fireball R1", ["SHIFT-Z"] = "Evocation", ["SHIFT-X"] = "Cold Snap", ["SHIFT-C"] = "Mana Gem",
-  UP = "Health Pot", DOWN = "Conjured Pumpernickel", LEFT = "Conjured Spring Water", RIGHT = "Bandage Self",
+  ["SHIFT-E"] = "Scorch", ["SHIFT-R"] = "Arcane Missiles", ["SHIFT-Z"] = "Evocation", ["SHIFT-X"] = "Cold Snap", ["SHIFT-C"] = "Mana Gem",
+  UP = "Health Pot", DOWN = "Conjured Rye", LEFT = "Conjured Purified Water", RIGHT = "Bandage Self",
   -- left hand with Alt, the pad key above Shift: the racial, the off-school nuke, the panic kit
   ["ALT-Q"] = "Free Me", ["ALT-E"] = "Fireball", ["ALT-Z"] = "Mana Shield", ["ALT-X"] = "Trinkets", ["ALT-C"] = "Decurse",
   ["ALT-DOWN"] = "Conjure Food", ["ALT-LEFT"] = "Conjure Water", ["ALT-RIGHT"] = "Conjure Mana Agate",
@@ -145,16 +145,16 @@ eq(G.binds["SHIFT-BUTTON3"], "FOCUSTARGET", "and off puts the plain bind back") 
 -- each bar is one device, in the order the keys sit
 local function row(first, n) local t = {} for i = 0, (n or 12) - 1 do t[#t + 1] = at(first + i) end return table.concat(t, " | ") end
 -- the mouse bars fill from the bottom row up, so the bar is stored bottom row first and DRAWN with 1 2 3 on top
-eq(row(25), "Flamestrike | Frostbolt R1 | - | Frost Ward | Fire Ward | Teleport: Thunder Bluff | Counterspell! | Blizzard | Arcane Missiles | Poly Focus | Cone of Cold! | Arcane Explosion", "the mouse bar is stored bottom row first")
+eq(row(25), "Flamestrike | Frostbolt R1 | - | Frost Ward | Fire Ward | Teleport: Orgrimmar | Counterspell! | Blizzard | Arcane Missiles | Poly Focus | Cone of Cold! | Arcane Explosion", "the mouse bar is stored bottom row first")
 local drawn = {}
 for r = 3, 0, -1 do drawn[#drawn + 1] = row(25 + r * 3, 3) end
-eq(table.concat(drawn, " / "), "Poly Focus | Cone of Cold! | Arcane Explosion / Counterspell! | Blizzard | Arcane Missiles / Frost Ward | Fire Ward | Teleport: Thunder Bluff / Flamestrike | Frostbolt R1 | -", "on screen the block reads like the mouse: 1 2 3 on the top row")
+eq(table.concat(drawn, " / "), "Poly Focus | Cone of Cold! | Arcane Explosion / Counterspell! | Blizzard | Arcane Missiles / Frost Ward | Fire Ward | Teleport: Orgrimmar / Flamestrike | Frostbolt R1 | -", "on screen the block reads like the mouse: 1 2 3 on the top row")
 eq(row(1, 7), "Frost Nova | Frostbolt | Ice Lance! | Blink! | Fire Blast! | Ice Block! | Shoot", "the main bar reads Q E R F Z X C")
-eq(row(9, 4), "Health Pot | Conjured Pumpernickel | Conjured Spring Water | Bandage Self", "then the thumb pad")
+eq(row(9, 4), "Health Pot | Conjured Rye | Conjured Purified Water | Bandage Self", "then the thumb pad")
 -- macros say what they should
 for name, needle in pairs({ ["Ice Lance!"] = "/stopcasting\n/cast Ice Lance", ["Cone of Cold!"] = "/stopcasting\n/cast Cone of Cold", ["Fire Blast!"] = "/stopcasting\n/cast Fire Blast",
                             ["Counterspell!"] = "/stopcasting\n/cast Counterspell", ["Bandage Self"] = "/use [@player] item:3531", ["Health Pot"] = "/use item:929",
-                            ["Frostbolt R1"] = "/cast Frostbolt(Rank 1)", ["Fireball R1"] = "/cast Fireball(Rank 1)", ["Decurse"] = "@mouseover,help", ["Mana Gem"] = "/use item:5514" }) do
+                            ["Frostbolt R1"] = "/cast Frostbolt(Rank 1)", ["Decurse"] = "@mouseover,help", ["Mana Gem"] = "/use item:5514" }) do
   check(G.macros[name] and G.macros[name]:find(needle, 1, true), "macro " .. name .. " does its job")
 end
 -- every castable spell he knows is on a bar somewhere. The layout's own ignore list is the
@@ -317,7 +317,7 @@ eq(cast("CTRL-Q"), "Arcane Missiles", "keyboard preset: Ctrl+Q is what thumb 6 i
 eq(cast("CTRL-5"), "Ice Armor", "keyboard preset: Ctrl+5 is what Shift + thumb 10 is")
 eq(cast("E"), "Frostbolt", "the main keys are the same in every preset")
 SlashCmdList["TORCHBINDS"]("preset xaryu") runTimers()
-for key, spell in pairs({ ["3"] = "Frostbolt", TAB = "Frost Nova", ["1"] = "Cone of Cold!", ["5"] = "Fireball R1", BUTTON5 = "Fire Blast!", BUTTON4 = "Ice Block!",
+for key, spell in pairs({ ["3"] = "Frostbolt", TAB = "Frost Nova", ["1"] = "Cone of Cold!", ["5"] = "Arcane Missiles", BUTTON5 = "Fire Blast!", BUTTON4 = "Ice Block!",
                           MOUSEWHEELDOWN = "Poly Focus", V = "Counterspell!", ["SHIFT-3"] = "Mana Gem", ["SHIFT-BUTTON4"] = "Cold Snap", ["ALT-1"] = "Slow Fall",
                           ["2"] = "Arcane Explosion", ["4"] = "Blizzard" }) do
   eq(cast(key), spell, "xaryu preset: " .. key)
@@ -809,15 +809,18 @@ eq(#(TorchBindsDB.log or {}), 0, "level 1: nothing went wrong: " .. table.concat
 G.book[4] = { name = "Frostbolt", spellID = 116, itemType = 1 } spellName[116] = "Frostbolt"
 fire("SPELLS_CHANGED")
 eq(cast("E"), "Frostbolt", "learning Frostbolt puts it on E by itself")
-eq(cast("SHIFT-R"), "Fireball R1", "rank 1 Fireball is on Shift+R")
+eq(cast("SHIFT-R"), "<nil>", "Shift+R stays empty until Arcane Missiles is learned (no junk downrank on a fresh mage)")
 check(whereIs("Frostbolt R1"), "and the rank 1 Frostbolt macro gets a click square")
+G.book[5] = { name = "Arcane Missiles", spellID = 5143, itemType = 1 } spellName[5143] = "Arcane Missiles"
+fire("SPELLS_CHANGED")
+eq(cast("SHIFT-R"), "Arcane Missiles", "learning Arcane Missiles puts it on Shift+R")
 
 -- 10. a class with no layout: binds only, no errors ---------------------------------------------------------
 TorchBindsDB = {}
 G.class = "WARRIOR"
 ns = load()
 fire("PLAYER_ENTERING_WORLD", true, false)
-eq(TorchBindsDB.layoutVersion, 13, "no layout: marked done")
+eq(TorchBindsDB.layoutVersion, 14, "no layout: marked done")
 eq(#(TorchBindsDB.log or {}), 0, "no layout: nothing logged: " .. table.concat(TorchBindsDB.log or {}, " | "))
 
 -- 11. the game answers "empty" for every slot at once: no key is taken away -------------------------------
@@ -873,6 +876,32 @@ do
   eq(frostArmorId(), 7301, "max rank wins from the spell subtext when the book entry omits it")
   C_Spell.GetSpellSubtext, C_SpellBook.IsSpellBookItemLowRank, G.book = realSub, realLow, {}
 end
+
+-- 12. a cold login: arranged bars, but the whole bar system is not serving yet ------------------
+-- The real case (2026-11-10): a layout upgrade at the first login of the day ran while every
+-- slot read empty and PlaceAction was silently ignored, so it rearranged the bars blind and
+-- dropped what each swap handed back (90 refused placements in one session). An upgrade against
+-- a dead bar system must wait, touch nothing, record nothing, and finish once the client serves.
+G.book = { [1] = { name = "Attack", spellID = 6603, itemType = 1 }, [2] = { name = "Fireball", spellID = 133, itemType = 1 }, [3] = { name = "Frost Armor", spellID = 168, itemType = 1 } }
+TorchBindsDB.layoutVersion = TorchBindsDB.layoutVersion - 1   -- the last session ran the previous layout
+TorchBindsDB.appliedVersion = TorchBindsDB.appliedVersion - 1
+local coldSlots = {}
+for slot, a in pairs(G.slots) do coldSlots[slot] = a end
+local coldHas, coldInfo, coldPlace = C_ActionBar.HasAction, GetActionInfo, PlaceAction
+C_ActionBar.HasAction, GetActionInfo = function() return false end, function() return nil end
+PlaceAction = function() end                                  -- writes silently ignored, like the real cold client
+fire("PLAYER_ENTERING_WORLD", true, false)
+eq(TorchBindsDB.layoutVersion, 13, "cold login: the upgrade waits instead of running blind")
+local touched = false
+for slot, a in pairs(G.slots) do if coldSlots[slot] ~= a then touched = true end end
+for slot in pairs(coldSlots) do if G.slots[slot] == nil then touched = true end end
+check(not touched, "cold login: not one bar square was touched")
+eq(#(TorchBindsDB.log or {}), 0, "cold login: nothing went wrong: " .. table.concat(TorchBindsDB.log or {}, " | "))
+C_ActionBar.HasAction, GetActionInfo, PlaceAction = coldHas, coldInfo, coldPlace
+runTimers()                                                   -- the deferred retry finds the client serving
+eq(TorchBindsDB.layoutVersion, 14, "cold login: the upgrade finished once the client served")
+eq(cast("E"), "Fireball", "cold login: the nuke key still casts after the late apply")
+eq(#(TorchBindsDB.log or {}), 0, "cold login: still nothing went wrong: " .. table.concat(TorchBindsDB.log or {}, " | "))
 
 say(("%d passed, %d failed\n"):format(passed, failed))
 os.exit(failed == 0 and 0 or 1)
