@@ -2,7 +2,7 @@
 
 A whole control setup for **World of Warcraft: Forever**, built for a keypad and an MMO mouse, or just a keyboard.
 
-Made by **The True Torchmen**. For the Horde.
+Made by **True Torchmen**. For the Horde.
 
 ## What it does
 

@@ -949,38 +949,76 @@ local function macroExists(name) return (try(GetMacroIndexByName, name) or 0) > 
 -- macros earlier versions of this addon made, before it kept a list of its own
 local LEGACY_MACROS = { ["Poly Focus"] = true, ["Counterspell Foc"] = true, ["Counterspell Ins"] = true, ["Mana Gem"] = true }
 
--- Makes sure a macro of ours exists with this text. A macro of the same name that you wrote
--- yourself is never edited: it is left exactly as it is and used as it stands.
-local function ensureMacro(name, body)
+-- Is this macro the addon's to manage? A record carrying text (or the old `true`) says ours;
+-- an explicit false says yours, and that wins even over the legacy name list.
+local function ownedMacro(name)
+  local o = (TorchBindsDB.macros or {})[name]
+  if o == nil then return LEGACY_MACROS[name] or false end
+  return o ~= false
+end
+
+-- Makes sure a macro of ours exists with this text. The record keeps the exact text this addon
+-- last wrote, so a difference tells us whose the standing text is: the addon's own older text
+-- is brought up to date, but a text YOU saved -- your own macro, or your edit of ours -- is
+-- yours for good and never written over again. Records from before 8.2.4 only said "ours"
+-- (true): such a record is believed only while the standing text is one the addon is known to
+-- have written (`old`, when given), so a save of yours is recognized even against a stale
+-- record from another character. A body that cannot be read decides nothing.
+local function ensureMacro(name, body, old)
   local owned = TorchBindsDB.macros
   if not owned then owned = {} TorchBindsDB.macros = owned end
   local ok, err = pcall(function()
-    if macroExists(name) then
-      if plain(try(GetMacroBody, name)) == body then
-        owned[name] = owned[name] or false -- same text, whoever wrote it
-      elseif owned[name] or LEGACY_MACROS[name] then
-        EditMacro(name, name, nil, body)
-        owned[name] = true
-      elseif owned[name] == nil then
-        owned[name] = false
-        note("macro kept", name .. " is yours and was not changed")
-      end
-    else
+    if owned[name] == false then return end -- yours, for good, standing or deleted
+    if not macroExists(name) then
       CreateMacro(name, "INV_MISC_QUESTIONMARK", body, false)
-      if macroExists(name) then owned[name] = true end
+      if macroExists(name) then owned[name] = body end
+      return
+    end
+    local current = plain(try(GetMacroBody, name))
+    if type(current) ~= "string" then return end -- a blind read decides nothing
+    if current == body then
+      if owned[name] == nil then owned[name] = false -- same text, but yours came first
+      else owned[name] = body end
+    elseif (owned[name] == true and (not old or old[current])) or owned[name] == current
+        or (owned[name] == nil and LEGACY_MACROS[name]) then
+      EditMacro(name, name, nil, body)
+      owned[name] = body
+    elseif owned[name] == nil then
+      owned[name] = false
+      note("macro kept", name .. " is yours and was not changed")
+    else
+      -- ours once, but the standing text is not one we wrote: you saved your own over it
+      owned[name] = false
+      note("macro kept", name .. " carries your edit now and will not be touched again")
     end
   end)
   if not ok then note("macro failed", name .. " " .. tostring(err)) end
   return macroExists(name)
 end
 
--- The guild recruiting line, one macro per channel (a macro holds 255 characters, one line of this).
--- Made once; after that the text is yours to edit in /macro unless this line changes.
-local RECRUIT = "<The True Torchmen> (Horde) building an enjoyable progression PvP and raid core. Nov 4 launch. We have our own addons and a site with guides that explain everything: passthetorch.pages.dev  Discord: discord.gg/passthetorch  PST for an invite!"
+-- The guild recruiting line, one macro per channel (a macro holds 255 characters, one line of
+-- this). The addon keeps the text current only until you save your own over one: from that
+-- moment that macro is yours and survives every relog untouched.
+local RECRUIT = "<True Torchmen> (Horde) : Semi-hardcore guild from Era/Nost is recruiting War, Mage, Sham. We use our PvP  addon: Godslayer, curseforge. Guild page: passthetorch.pages.dev .  Raid Time Sat: 8pm EST"
+-- the ad every version before 8.2.4 wrote, recognized during the one-time cleanup below
+local OLD_RECRUIT = "<The True Torchmen> (Horde) building an enjoyable progression PvP and raid core. Nov 4 launch. We have our own addons and a site with guides that explain everything: passthetorch.pages.dev  Discord: discord.gg/passthetorch  PST for an invite!"
 local function recruitMacros()
   if InCombatLockdown() then return end
-  ensureMacro("Recruit Trade", "/2 " .. RECRUIT)
-  ensureMacro("Recruit World", "/6 " .. RECRUIT)
+  -- 8.2.4 retired the world-channel ad (/6) for a yell. The old macro goes, but only while it
+  -- reads exactly what this addon wrote; a text you saved there stays yours.
+  if macroExists("Recruit World") then
+    local body = plain(try(GetMacroBody, "Recruit World"))
+    if body == "/6 " .. OLD_RECRUIT or body == "/6 " .. RECRUIT then
+      try(DeleteMacro, "Recruit World")
+      if not macroExists("Recruit World") and TorchBindsDB.macros then TorchBindsDB.macros["Recruit World"] = nil end
+    end
+  end
+  -- the texts older versions wrote: a record that only says "ours" (true) is believed against
+  -- these and no other, so an ad you saved is yours even under a stale record
+  local olds = { ["/2 " .. OLD_RECRUIT] = true, ["/6 " .. OLD_RECRUIT] = true }
+  ensureMacro("Recruit General", "/1 " .. RECRUIT, olds)
+  ensureMacro("Recruit Trade", "/2 " .. RECRUIT, olds)
+  ensureMacro("Recruit Yell", "/y " .. RECRUIT, olds)
 end
 
 local function stopName(spell) return (spell .. "!"):sub(1, 16) end
@@ -1351,7 +1389,7 @@ local function arrange(force, changes)
       or (kind == "item" and { kind = "item", id = id, label = itemName(id) or ("item " .. tostring(id)) })
     if not desc then return nil end
     -- a macro you wrote is yours even when it shares a name with one of this addon's
-    local yours = kind == "macro" and not ((TorchBindsDB.macros or {})[text] == true or LEGACY_MACROS[text])
+    local yours = kind == "macro" and not ownedMacro(text)
     if yours then
       if managed["yours:" .. text] then return nil end
       managed["yours:" .. text] = true
@@ -1385,7 +1423,7 @@ local function arrange(force, changes)
       if not target[slot] and not isPool[slot] and not entryAt[slot] then
         local kind, id, text = slotInfo(slot)
         local k = (kind == "spell" and text and ("spell:" .. text)) or (kind == "macro" and text and ("macro:" .. text)) or nil
-        local ours = kind == "macro" and text and ((TorchBindsDB.macros or {})[text] == true or LEGACY_MACROS[text])
+        local ours = kind == "macro" and text and ownedMacro(text)
         if k and placedKeys[k] and (kind == "spell" or ours) then clear(slot, changes) end
       end
     end

@@ -903,5 +903,59 @@ eq(TorchBindsDB.layoutVersion, 14, "cold login: the upgrade finished once the cl
 eq(cast("E"), "Fireball", "cold login: the nuke key still casts after the late apply")
 eq(#(TorchBindsDB.log or {}), 0, "cold login: still nothing went wrong: " .. table.concat(TorchBindsDB.log or {}, " | "))
 
+-- 13. the recruiting ad: the addon's text until you save your own, then never touched again ----
+-- The real case (2026-11-11): every relog rewrote Nick's edited ad back to the stale pre-launch
+-- text, because the record only said WHOSE the macro was, not WHICH text the addon wrote.
+local AD = "<True Torchmen> (Horde) : Semi-hardcore guild from Era/Nost is recruiting War, Mage, Sham. We use our PvP  addon: Godslayer, curseforge. Guild page: passthetorch.pages.dev .  Raid Time Sat: 8pm EST"
+local OLDAD = "<The True Torchmen> (Horde) building an enjoyable progression PvP and raid core. Nov 4 launch. We have our own addons and a site with guides that explain everything: passthetorch.pages.dev  Discord: discord.gg/passthetorch  PST for an invite!"
+eq(G.macros["Recruit General"], "/1 " .. AD, "the general-channel ad says the new line")
+eq(G.macros["Recruit Trade"], "/2 " .. AD, "the trade-channel ad says the new line")
+eq(G.macros["Recruit Yell"], "/y " .. AD, "the yell ad says the new line")
+check(not AD:find("The True Torchmen", 1, true), "the guild is True Torchmen, no The")
+-- the 8.2.3 upgrade replay: stale true-records with the old stomped ad standing
+G.macros["Recruit Trade"] = "/2 " .. OLDAD
+TorchBindsDB.macros["Recruit Trade"] = true
+G.macros["Recruit World"] = "/6 " .. OLDAD
+TorchBindsDB.macros["Recruit World"] = true
+fire("PLAYER_ENTERING_WORLD", true, false) runTimers()
+eq(G.macros["Recruit Trade"], "/2 " .. AD, "a true-record over the addon's old ad is brought up to date")
+eq(TorchBindsDB.macros["Recruit Trade"], "/2 " .. AD, "and the record now carries the text itself")
+check(G.macros["Recruit World"] == nil, "the retired world-channel macro is cleaned up")
+eq(TorchBindsDB.macros["Recruit World"], nil, "and its record with it")
+-- a body the client cannot hand back decides nothing
+local realBody = GetMacroBody
+GetMacroBody = function(n) if n == "Recruit Trade" then return nil end return realBody(n) end
+fire("PLAYER_ENTERING_WORLD", true, false) runTimers()
+GetMacroBody = realBody
+eq(G.macros["Recruit Trade"], "/2 " .. AD, "a blind read changes nothing")
+eq(TorchBindsDB.macros["Recruit Trade"], "/2 " .. AD, "and decides nothing")
+-- a true-record over a text the addon NEVER wrote is a save of his, even from another character
+G.macros["Recruit Yell"] = "/y his own wording from another day"
+TorchBindsDB.macros["Recruit Yell"] = true
+fire("PLAYER_ENTERING_WORLD", true, false) runTimers()
+eq(G.macros["Recruit Yell"], "/y his own wording from another day", "a true-record over HIS text keeps his text")
+eq(TorchBindsDB.macros["Recruit Yell"], false, "and the macro is marked his for good")
+-- he fixes the wording and presses Save: his text must survive every relog from now on
+G.macros["Recruit Trade"] = "/2 my own words, saved on purpose"
+fire("PLAYER_ENTERING_WORLD", true, false) runTimers()
+eq(G.macros["Recruit Trade"], "/2 my own words, saved on purpose", "a saved edit survives the relog")
+eq(TorchBindsDB.macros["Recruit Trade"], false, "and the macro is marked his for good")
+fire("PLAYER_ENTERING_WORLD", true, false) runTimers()
+eq(G.macros["Recruit Trade"], "/2 my own words, saved on purpose", "and every relog after that")
+-- a macro of his that he deleted stays deleted
+G.macros["Recruit Trade"] = nil
+fire("PLAYER_ENTERING_WORLD", true, false) runTimers()
+check(G.macros["Recruit Trade"] == nil, "a deleted macro of his is not recreated")
+-- same text, no record: the addon claims nothing it did not write
+TorchBindsDB.macros["Recruit General"] = nil
+fire("PLAYER_ENTERING_WORLD", true, false) runTimers()
+eq(TorchBindsDB.macros["Recruit General"], false, "a matching text with no record stays yours")
+eq(G.macros["Recruit General"], "/1 " .. AD, "and the text stands")
+-- a world macro that holds HIS text is never cleaned up
+G.macros["Recruit World"] = "/6 his own world ad"
+TorchBindsDB.macros["Recruit World"] = true
+fire("PLAYER_ENTERING_WORLD", true, false) runTimers()
+eq(G.macros["Recruit World"], "/6 his own world ad", "a world macro carrying his text stays")
+
 say(("%d passed, %d failed\n"):format(passed, failed))
 os.exit(failed == 0 and 0 or 1)

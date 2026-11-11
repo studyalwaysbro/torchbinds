@@ -1,5 +1,19 @@
 # Torch Binds changelog
 
+## 8.2.4 — 2026-11-11
+- A macro you save is yours, for good. The addon used to mark every macro it created "ours"
+  forever, so an edit you saved over one (the recruiting ad above all) was rewritten back to
+  the addon's text 8 seconds into every login. The record now keeps the exact text the addon
+  last wrote: its own older text is brought up to date, but a standing text that is not the
+  addon's is your save, and that macro is never written over again.
+- The recruiting ad is the current one (the guild is True Torchmen, no "The"), on three
+  macros: Recruit General (/1), Recruit Trade (/2), Recruit Yell (/y). The world-channel
+  macro (/6) is retired and removed, but only while it still reads exactly what the addon
+  wrote; a text you saved there stays.
+- Tests: run 402 on both fixtures, v11 178, fuzz clean; new section replays the relog stomp,
+  the upgrade from the old records, a save of yours standing under a stale record, and a
+  deleted macro of yours staying deleted.
+
 ## 8.2.3 — 2026-11-10
 - Never arrange against a bar system that is not serving. A cold login can hand the addon a
   client whose slots all read empty while PlaceAction is silently ignored; the 8.2.2 layout

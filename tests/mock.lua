@@ -48,6 +48,7 @@ function GetMacroIndexByName(name) return G.macros[name] and 1 or 0 end
 function GetMacroBody(name) return G.macros[name] end
 function EditMacro(name, _, _, body) assert(not G.combat) assert(#name <= 16 and #body <= 255, "macro too long: " .. name) G.macros[name] = body end
 function CreateMacro(name, _, body) assert(not G.combat) assert(#name <= 16 and #body <= 255, "macro too long: " .. name) G.macros[name] = body end
+function DeleteMacro(name) assert(not G.combat) G.macros[name] = nil end
 function hooksecurefunc(a, b, c)
   local tbl, name, hook = _G, a, b
   if type(a) == "table" then tbl, name, hook = a, b, c end
