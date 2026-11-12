@@ -1,5 +1,23 @@
 # Torch Binds changelog
 
+## 8.2.5 — 2026-11-11
+- Click to decurse no longer vanishes. The clicks (middle-click a frame, Shift + right-click
+  a frame) were written once, at setup, into a profile the client does not reliably keep
+  across sessions: it can come back next login holding only the game's own defaults, and
+  nothing ever put the decurse clicks back. Now the addon enforces its record at every login:
+  what it owns goes back in, quietly, and a line lands in the log when the client had lost
+  them. A click you set yourself in the game's Click Bindings window is never replaced.
+- /torch decurse off takes the addon's decurse clicks out and keeps them out, across logins,
+  setups and upgrades. The word is recorded the moment you say it, even mid-fight or on a
+  client that is not serving yet; the clicks come out as soon as the game allows. /torch
+  decurse puts them back.
+- A cold login that serves no spellbook or no click profile yet decides nothing: the addon
+  retries, and gives up on the session rather than mistake a client that is not ready for a
+  spell that is not learned.
+- Tests: run 435 on both fixtures, v11 178, fuzz clean; the new section replays the client
+  losing the clicks, a partial loss, off said in combat and against an unreadable profile, a
+  forced setup over your off, and the cold spellbook.
+
 ## 8.2.4 — 2026-11-11
 - A macro you save is yours, for good. The addon used to mark every macro it created "ours"
   forever, so an edit you saved over one (the recruiting ad above all) was rewritten back to

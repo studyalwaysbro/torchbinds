@@ -78,6 +78,12 @@ saved.layoutVersion = saved.layoutVersion and (saved.layoutVersion - 1)
 saved.undo, saved.bindsBefore = nil, nil
 -- the sim plays the character the SV describes; the racial keys depend on it
 G.race = (saved.character and saved.character.race) or G.race
+-- a live SV can say the decurse clicks are in ("ok") while the sim's client starts empty.
+-- A client that kept them is the normal case; the client that loses them is section 8b.
+if saved.clickCast == "ok" then
+  G.clicks = { { type = 1, actionID = 475, button = "MiddleButton", modifiers = 0 },
+               { type = 1, actionID = 475, button = "RightButton", modifiers = 4 } }
+end
 TorchBindsDB = saved
 local ns = load()
 
@@ -794,6 +800,109 @@ SlashCmdList["TORCHBINDS"]("look devices")
 eq(#G.edit.layouts, 5, "five existing layouts are left exactly alone")
 eq(G.edit.activeLayout, 3, "and the active one is not switched")
 G.edit.layouts, G.edit.activeLayout = {}, 2
+
+-- 8b. the decurse clicks: lost by the client between sessions, put back at login ---------------------------
+say("-- 8b. the decurse clicks --")
+local function defaults() -- what the live client's profile came back as: its own two entries, ours gone
+  return { { type = 3, actionID = 1, button = "LeftButton", modifiers = 0 }, { type = 3, actionID = 2, button = "RightButton", modifiers = 0 } }
+end
+local function decurseClicks()
+  local n = 0
+  for _, b in ipairs(G.clicks) do if b.type == Enum.ClickBindingType.Spell and b.actionID == 475 then n = n + 1 end end
+  return n
+end
+TorchBindsDB.clickCast = "ok"
+G.clicks = defaults()
+fire("PLAYER_ENTERING_WORLD", true, false) runTimers()
+eq(decurseClicks(), 2, "a login puts both decurse clicks back")
+eq(#G.clicks, 4, "and keeps the client's own entries")
+check(table.concat(TorchBindsDB.log or {}, " "):find("put back", 1, true) ~= nil, "and the log says the client lost them")
+-- a middle click of yours is never replaced
+G.clicks = { { type = 3, actionID = 7, button = "MiddleButton", modifiers = 0 } }
+fire("PLAYER_ENTERING_WORLD", true, false) runTimers()
+local midYours
+for _, b in ipairs(G.clicks) do if b.button == "MiddleButton" and b.modifiers == 0 then midYours = (b.type == 3 and b.actionID == 7) end end
+check(midYours, "a middle click of yours stands")
+eq(decurseClicks(), 1, "and the addon settles for Shift + right-click")
+-- /torch decurse off takes only ours out, and a login does not sneak them back
+G.clicks = defaults()
+fire("PLAYER_ENTERING_WORLD", true, false) runTimers()
+SlashCmdList["TORCHBINDS"]("decurse off")
+eq(decurseClicks(), 0, "off takes the decurse clicks out")
+eq(#G.clicks, 2, "and touches nothing else")
+eq(TorchBindsDB.clickCast, "off", "off is recorded")
+fire("PLAYER_ENTERING_WORLD", true, false) runTimers()
+eq(decurseClicks(), 0, "a login respects off")
+SlashCmdList["TORCHBINDS"]("decurse")
+eq(TorchBindsDB.clickCast, "ok", "decurse switches back on")
+check(decurseClicks() >= 1, "and the clicks are back")
+-- a login in combat writes nothing; the end of the fight writes it
+G.clicks = defaults()
+G.combat = true
+fire("PLAYER_ENTERING_WORLD", true, false) runTimers()
+eq(decurseClicks(), 0, "a login in combat writes no clicks")
+G.combat = false
+fire("PLAYER_REGEN_ENABLED")
+eq(decurseClicks(), 2, "the end of the fight puts them back")
+-- a partial loss: the kept click is not re-claimed, only the lost one is put back
+G.clicks = defaults()
+G.clicks[#G.clicks + 1] = { type = 1, actionID = 475, button = "MiddleButton", modifiers = 0 }
+fire("PLAYER_ENTERING_WORLD", true, false) runTimers()
+eq(decurseClicks(), 2, "the lost click returns beside the kept one")
+local logText = table.concat(TorchBindsDB.log or {}, " ")
+check(logText:find("put back: Shift + right-click", 1, true) ~= nil, "the log names the lost click")
+check(logText:find("middle-click", 1, true) == nil, "and not the kept one")
+-- off said in combat is still off
+G.combat = true
+SlashCmdList["TORCHBINDS"]("decurse off")
+eq(TorchBindsDB.clickCast, "off", "off said in combat is recorded at once")
+eq(decurseClicks(), 2, "though no click can come out during the fight")
+G.combat = false
+fire("PLAYER_REGEN_ENABLED")
+eq(decurseClicks(), 0, "the end of the fight takes them out")
+fire("PLAYER_ENTERING_WORLD", true, false) runTimers()
+eq(decurseClicks(), 0, "and a login does not sneak them back after a combat off")
+-- off said while the profile cannot be read is still off
+SlashCmdList["TORCHBINDS"]("decurse")
+eq(TorchBindsDB.clickCast, "ok", "on again")
+local realProfile = C_ClickBindings.GetProfileInfo
+C_ClickBindings.GetProfileInfo = function() return nil end
+SlashCmdList["TORCHBINDS"]("decurse off")
+eq(TorchBindsDB.clickCast, "off", "off stands though the profile could not be read")
+C_ClickBindings.GetProfileInfo = realProfile
+fire("PLAYER_ENTERING_WORLD", true, false) runTimers()
+eq(decurseClicks(), 0, "and the next login takes the clicks out")
+-- a forced setup (an upgrade runs one) does not override your off
+SlashCmdList["TORCHBINDS"]("setup") runTimers()
+eq(TorchBindsDB.clickCast, "off", "a forced setup leaves your off standing")
+eq(decurseClicks(), 0, "and adds no clicks")
+-- a cold login serving no spellbook decides nothing, in either direction
+SlashCmdList["TORCHBINDS"]("decurse")
+eq(TorchBindsDB.clickCast, "ok", "on again for the cold-login test")
+G.clicks = defaults()
+local realBook = G.book
+G.book = {}
+fire("PLAYER_ENTERING_WORLD", true, false) runTimers()
+eq(TorchBindsDB.clickCast, "ok", "an unserved spellbook is not mistaken for not learned")
+eq(decurseClicks(), 0, "and nothing is written blind")
+G.book = realBook
+fire("PLAYER_ENTERING_WORLD", true, false) runTimers()
+eq(decurseClicks(), 2, "the next serving login puts the clicks back")
+-- a removal whose write the game ignored and whose read-back fails is not called taken out
+local realProfile2, realSet = C_ClickBindings.GetProfileInfo, C_ClickBindings.SetProfileByInfo
+local reads = 0
+C_ClickBindings.GetProfileInfo = function() reads = reads + 1 if reads > 1 then return nil end return realProfile2() end
+C_ClickBindings.SetProfileByInfo = function() end -- the game silently ignores the write
+local saidAt = #G.printed
+SlashCmdList["TORCHBINDS"]("decurse off")
+eq(TorchBindsDB.clickCast, "off", "off is recorded though the removal went unverified")
+local saidText = table.concat(G.printed, " ", saidAt + 1)
+check(saidText:find("next login", 1, true) ~= nil, "and it does not claim the clicks were taken out: " .. saidText)
+C_ClickBindings.GetProfileInfo, C_ClickBindings.SetProfileByInfo = realProfile2, realSet
+fire("PLAYER_ENTERING_WORLD", true, false) runTimers()
+eq(decurseClicks(), 0, "and the next login settles it: the clicks are out")
+SlashCmdList["TORCHBINDS"]("decurse")
+eq(TorchBindsDB.clickCast, "ok", "and on again at the end")
 
 -- 9. a fresh level 1 mage ---------------------------------------------------------------------------------
 TorchBindsDB = {}

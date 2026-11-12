@@ -2,7 +2,7 @@
 ## Title: Torch Binds
 ## Notes: A mage's whole control setup for a Tartarus or a keyboard with an MMO mouse: every spell on the bars, three layers of keys bound (plain, Shift, Alt), the spells following your talent tree and your race, ranks, potions and bandages kept current, rested experience watched, presses counted. Type /torch map.
 ## Author: Pass The Torch
-## Version: 8.2.4
+## Version: 8.2.5
 ## SavedVariablesPerCharacter: TorchBindsDB
 TorchBinds.lua
 Stats.lua

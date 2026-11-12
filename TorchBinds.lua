@@ -1476,20 +1476,25 @@ end
 -- The game has click casting built in for its own party, raid and player frames. This adds
 -- Remove Lesser Curse to it: middle-click a frame, or Shift + right-click it. Left click still
 -- targets and plain right click still opens the menu.
+local function shiftBits()
+  local toText = (C_Input and C_Input.GetStringFromModifiers) or GetStringFromModifiers
+  for bits = 1, 16 do
+    local text = plain(try(toText, bits))
+    if type(text) == "string" and text:upper():gsub("[^A-Z]", "") == "SHIFT" then return bits end
+  end
+end
+
 local function clickCast()
   local CB = C_ClickBindings
-  local known = spellIndex()["Remove Lesser Curse"]
+  local index = spellIndex()
+  if next(index) == nil then return "the spellbook is not serving yet" end -- a cold login decides nothing
+  local known = index["Remove Lesser Curse"]
   if not known then return "not learned" end
   if not (CB and CB.GetProfileInfo and CB.SetProfileByInfo and Enum and Enum.ClickBindingType) then return "no click casting in this client" end
   if InCombatLockdown() then return "combat" end
   local profile = try(CB.GetProfileInfo)
   if type(profile) ~= "table" then return "could not read the click bindings" end
-  local shift
-  local toText = (C_Input and C_Input.GetStringFromModifiers) or GetStringFromModifiers
-  for bits = 1, 16 do
-    local text = plain(try(toText, bits))
-    if type(text) == "string" and text:upper():gsub("[^A-Z]", "") == "SHIFT" then shift = bits break end
-  end
+  local shift = shiftBits()
   local spell = known.base or known.id
   local wantList = { { button = "MiddleButton", modifiers = 0, label = "middle-click" } }
   if shift then wantList[2] = { button = "RightButton", modifiers = shift, label = "Shift + right-click" } end
@@ -1505,23 +1510,63 @@ local function clickCast()
     else
       profile[#profile + 1] = { type = Enum.ClickBindingType.Spell, actionID = spell, button = want.button, modifiers = want.modifiers }
       added = added + 1
-      ours[#ours + 1] = want.label
+      want.missing = true
     end
   end
   if added > 0 then
     local ok, err = pcall(CB.SetProfileByInfo, profile)
     if not ok then note("click cast", err) return "the game refused it" end
-    -- read it back: only what the game kept counts
-    local now, kept = try(CB.GetProfileInfo), {}
+    -- read it back: only what the game kept counts, and only what was missing was put back
+    local now, kept, back = try(CB.GetProfileInfo), {}, {}
     for _, want in ipairs(wantList) do
       for _, b in ipairs(type(now) == "table" and now or {}) do
-        if plain(b.button) == want.button and plain(b.modifiers) == want.modifiers and plain(b.actionID) == spell then kept[#kept + 1] = want.label end
+        if plain(b.button) == want.button and plain(b.modifiers) == want.modifiers and plain(b.actionID) == spell then
+          kept[#kept + 1] = want.label
+          if want.missing then back[#back + 1] = want.label end
+        end
       end
     end
     ours = kept
+    -- these were in and the client came back without them: that is worth a line in the log
+    if #back > 0 and TorchBindsDB.clickCast == "ok" then note("click cast", "put back: " .. table.concat(back, ", ")) end
   end
   if #ours == 0 then return "both clicks are already used for something else. Set one yourself: spellbook, Click Bindings" end
   return "ok", table.concat(ours, " or ")
+end
+
+-- Takes this addon's decurse clicks back out, and only them: the exact spell on the exact
+-- clicks it writes. Anything you set yourself in the Click Bindings window is not touched.
+local function clickCastOff()
+  local CB = C_ClickBindings
+  if not (CB and CB.GetProfileInfo and CB.SetProfileByInfo and Enum and Enum.ClickBindingType) then return "no click casting in this client" end
+  if InCombatLockdown() then return "combat" end
+  local index = spellIndex()
+  if next(index) == nil then return "the spellbook is not serving yet" end -- blind, it cannot tell its clicks apart
+  local known = index["Remove Lesser Curse"]
+  local spell = known and (known.base or known.id)
+  local profile = try(CB.GetProfileInfo)
+  if type(profile) ~= "table" then return "could not read the click bindings" end
+  local shift = shiftBits()
+  local function oursEntry(b)
+    return spell and plain(b.type) == Enum.ClickBindingType.Spell and plain(b.actionID) == spell
+      and ((plain(b.button) == "MiddleButton" and plain(b.modifiers) == 0)
+        or (shift and plain(b.button) == "RightButton" and plain(b.modifiers) == shift))
+  end
+  local keep, removed = {}, 0
+  for _, b in ipairs(profile) do
+    if oursEntry(b) then removed = removed + 1 else keep[#keep + 1] = b end
+  end
+  if removed > 0 then
+    local ok, err = pcall(CB.SetProfileByInfo, keep)
+    if not ok then note("click cast", err) return "the game refused it" end
+    -- read it back: a removal the game ignored, or one that cannot be checked, is not a removal
+    local now = try(CB.GetProfileInfo)
+    if type(now) ~= "table" then return "could not read the click bindings" end
+    for _, b in ipairs(now) do
+      if oursEntry(b) then return "the game kept a click it was asked to drop" end
+    end
+  end
+  return "ok", removed
 end
 
 -- SETUP, UPKEEP, UNDO, MAP --------------------------------------------------
@@ -1563,9 +1608,11 @@ local function setup(auto)
   if #report.missing > 0 then say("Not yours yet, added by itself when you get them: " .. list(report.missing, 8)) end
   local state = applyBinds()
   if state ~= "ok" then say("Keybinds will apply when the game is ready.") end
-  local click, how = clickCast()
-  TorchBindsDB.clickCast = click
-  if click == "ok" then say("Decurse: " .. how .. " a party, raid or player frame. Or hold Shift and press 3 with the mouse over anyone.") end
+  if TorchBindsDB.clickCast ~= "off" then -- your off stands through any setup, upgrades included
+    local click, how = clickCast()
+    TorchBindsDB.clickCast = click
+    if click == "ok" then say("Decurse: " .. how .. " a party, raid or player frame. Or hold Shift and press 3 with the mouse over anyone.") end
+  end
   dump("setup")
   return true
 end
@@ -1776,6 +1823,27 @@ local function tryLayout()
   end
 end
 
+-- The client does not reliably keep the decurse clicks across sessions: a profile written in
+-- play can come back next login holding only the game's defaults. So the recorded word is
+-- enforced at every login, in both directions: "off" means the clicks come out and stay out,
+-- anything else means what this addon owns goes back in. clickCast never replaces a click of
+-- yours, and clickCastOff takes out nothing but its own.
+local clickPending, clickTries = false, 0
+local function enforceClicks()
+  if TorchBindsDB.off then return end
+  local wantOff = TorchBindsDB.clickCast == "off"
+  local result = wantOff and clickCastOff() or clickCast()
+  if result == "combat" then clickPending = true return end
+  if result == "could not read the click bindings" or result == "the spellbook is not serving yet" then
+    if clickTries < 10 then
+      clickTries = clickTries + 1 -- a cold login can serve both late, like the bars
+      C_Timer.After(3, function() pcall(enforceClicks) end)
+    end
+    return -- a client not serving decides nothing, now or after the last try
+  end
+  if not wantOff then TorchBindsDB.clickCast = result end
+end
+
 local function queueUpkeep(quiet)
   if upkeepQueued then return end
   upkeepQueued = true
@@ -1804,6 +1872,8 @@ frame:SetScript("OnEvent", function(_, event, isLogin, isReload)
       C_Timer.After(3, function() tryApply(false) end) -- after the game has loaded its own bindings
       C_Timer.After(7, function() pcall(repairBinds) end)
       C_Timer.After(8, function() pcall(recruitMacros) end)
+      clickTries = 0
+      C_Timer.After(9, function() pcall(enforceClicks) end)
       C_Timer.After(5, tryLayout)
       queueDump("login", 9)
       pcall(hookBags)
@@ -1814,6 +1884,7 @@ frame:SetScript("OnEvent", function(_, event, isLogin, isReload)
     end
   elseif event == "PLAYER_REGEN_ENABLED" then
     if pending then pending = false tryApply(false) end
+    if clickPending then clickPending = false pcall(enforceClicks) end
     if specPending then specPending = false pcall(respec) queueUpkeep() end
     pcall(repairBinds)
     if layoutPending then
@@ -1890,9 +1961,23 @@ SlashCmdList["TORCHBINDS"] = function(input)
       for name, preset in pairs(PRESETS) do print("  |cffffd35a/torch preset " .. name .. "|r  " .. preset.label .. ". " .. preset.about) end
     end
   elseif cmd == "decurse" then
-    local result, how = clickCast()
-    TorchBindsDB.clickCast = result
-    say(result == "ok" and ("To decurse: " .. how .. " a party, raid or player frame.") or ("Click to decurse: " .. result .. ". The Decurse key still works on whoever the mouse is over."))
+    if rest == "off" then
+      TorchBindsDB.clickCast = "off" -- the word stands from this moment, whatever the hands can do right now
+      local result, removed = clickCastOff()
+      if result == "ok" then
+        say(removed > 0 and "Click to decurse is off and taken out. /torch decurse brings it back." or "Click to decurse is off. /torch decurse brings it back.")
+      elseif result == "combat" then
+        clickPending = true
+        say("Click to decurse is off. The clicks come out after the fight.")
+      else
+        say("Click to decurse is off. The clicks come out at your next login (" .. result .. ").")
+      end
+    else
+      local result, how = clickCast()
+      TorchBindsDB.clickCast = result
+      if result == "combat" then clickPending = true end
+      say(result == "ok" and ("To decurse: " .. how .. " a party, raid or player frame. It is kept across logins now; /torch decurse off takes it out.") or ("Click to decurse: " .. result .. ". The Decurse key still works on whoever the mouse is over."))
+    end
   elseif cmd == "binds" or cmd == "on" then
     TorchBindsDB.off = nil
     applyTries = 0
@@ -1924,7 +2009,7 @@ SlashCmdList["TORCHBINDS"] = function(input)
     say("/torch preset = switch between Tartarus and keyboard key sets")
     say("/torch look = where the mouse blocks sit: devices (above your bars), corner or off")
     say("/torch setup = force the layout again    /torch undo = put everything back")
-    say("/torch decurse = set up click to decurse    /torch binds = re-apply the keybinds")
+    say("/torch decurse = set up click to decurse (off = take it out, for good)    /torch binds = re-apply the keybinds")
     say("/torch hoverfocus on = set focus on whoever the mouse is over    /torch hovercs on = Counterspell the enemy under the mouse")
     say("/torch off or /torch on = stop or resume")
   end
